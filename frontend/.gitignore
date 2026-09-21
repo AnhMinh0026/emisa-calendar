@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Env files (Bổ sung để bảo mật tuyệt đối)
+.env
+.env.*
+!.env.example
+
+# Testing & Linting (Dự phòng cho tương lai)
+coverage/
+.eslintcache
