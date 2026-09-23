@@ -2,12 +2,14 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Table, Button, Modal, Form, Input, InputNumber,
   Select, Space, Tag, Popconfirm, App, Typography,
-  Tooltip, Flex, Tabs, Empty, Badge, DatePicker,
+  Tooltip, Flex, Tabs, Empty, Badge, DatePicker, Divider, Switch,
+  ConfigProvider,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
   ReloadOutlined, SearchOutlined, FilterOutlined,
-  CalendarOutlined, TeamOutlined,
+  CalendarOutlined, TeamOutlined, EyeOutlined,
+  UserAddOutlined, DollarOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../services/api';
@@ -16,23 +18,25 @@ const { Title, Text } = Typography;
 
 // ── Cấu hình tag trạng thái ───────────────────────────────────────────────
 const STATUS_CONFIG = {
-  open:   { color: 'success', label: 'Mở'   },
-  full:   { color: 'error',   label: 'Đầy'  },
+  open: { color: 'success', label: 'Mở' },
+  full: { color: 'error', label: 'Đầy' },
   closed: { color: 'default', label: 'Đóng' },
+};
+
+// Formatter VND — null/undefined/NaN safe
+const fmtMoney = (val) => {
+  const n = Number(val);
+  if (val === null || val === undefined || isNaN(n)) return '—';
+  if (n === 0) return '0đ';
+  return `${n.toLocaleString('vi-VN')}đ`;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: groupSessions
 // Nhóm mảng sessions thành cấu trúc phân cấp 2 tầng:
 //   { [campaignId]: { campaign, months: { [MM/YYYY]: { label, sessions[] } } } }
-//
-// Tầng 1: Khóa học (Campaign)
-// Tầng 2: Tháng (dựa theo campaignMonth của session)
 // ─────────────────────────────────────────────────────────────────────────────
 const groupSessions = (sessions, allCampaigns) => {
-  // Tạo map campaignId → campaign để tra cứu nhanh
-  const campaignMap = Object.fromEntries(allCampaigns.map((c) => [c._id, c]));
-
   const groups = {};
 
   sessions.forEach((session) => {
@@ -45,15 +49,14 @@ const groupSessions = (sessions, allCampaigns) => {
     if (!groups[cId]) {
       groups[cId] = {
         campaign: campaignObj,
-        months:   {},
-        // Dùng months[] của campaign để đảm bảo Tab thứ tự đúng
+        months: {},
         orderedMonths: campaignObj.months ?? [],
       };
     }
 
     if (!groups[cId].months[monthKey]) {
       groups[cId].months[monthKey] = {
-        label:    `Tháng ${monthKey}`,
+        label: `Tháng ${monthKey}`,
         sessions: [],
       };
     }
@@ -74,10 +77,9 @@ const formatDates = (dates) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: disabledDate — Chặn những ngày không thuộc campaignMonth đã chọn
-// campaignMonth: 'MM/YYYY'
 // ─────────────────────────────────────────────────────────────────────────────
 const buildDisabledDate = (campaignMonth) => {
-  if (!campaignMonth) return () => true; // Disable tất cả nếu chưa chọn tháng
+  if (!campaignMonth) return () => true;
   const [mm, yyyy] = campaignMonth.split('/').map(Number);
   return (current) => {
     if (!current) return false;
@@ -86,32 +88,462 @@ const buildDisabledDate = (campaignMonth) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT: DetailModal
+//
+// Modal quản lý danh sách học viên cho một ca học cụ thể.
+//
+// LUỒNG STATE AN TOÀN (tránh vỡ UI / Modal rỗng):
+//   Sau mỗi thao tác thêm/xóa học viên, component GỌI CALLBACK onRefresh()
+//   lên SessionPage. SessionPage sẽ:
+//     1. fetchSessions() → lấy data mới nhất từ server
+//     2. Tìm lại session hiện tại trong data mới
+//     3. Cập nhật selectedSession state → Modal tự re-render với data đúng
+//   KHÔNG tự mutate state sessions bằng tay.
+// ─────────────────────────────────────────────────────────────────────────────
+function DetailModal({ open, session, onClose, onRefresh }) {
+  const { message, modal } = App.useApp();
+  const [studentForm] = Form.useForm();
+  const [booking, setBooking] = useState(false);
+  const [removingId, setRemovingId] = useState(null); // studentId đang xóa
+
+  // Reset form mỗi khi mở modal với session mới
+  useEffect(() => {
+    if (open) {
+      studentForm.resetFields();
+    }
+  }, [open, session?._id, studentForm]);
+
+  // ── Thêm học viên ────────────────────────────────────────────────────────
+  const handleAddStudent = async () => {
+    let values;
+    try {
+      values = await studentForm.validateFields();
+    } catch {
+      return;
+    }
+
+    setBooking(true);
+    try {
+      await api.post(`/sessions/${session._id}/book`, {
+        name: values.name.trim(),
+        phone: values.phone.trim(),
+        depositAmount: values.depositAmount ?? 0,
+        remainingAmount: values.remainingAmount ?? 0,
+        isFullyPaid: values.isFullyPaid ?? false,
+        paymentNote: values.paymentNote?.trim() ?? '',
+      });
+
+      message.success(`Đã thêm học viên "${values.name.trim()}" vào lớp.`);
+      studentForm.resetFields();
+      // Gọi lên cha để fetch lại và đồng bộ state
+      await onRefresh();
+    } catch (err) {
+      const status = err.response?.status;
+      const msg = err.response?.data?.message || err.message;
+      if (status === 409) {
+        message.error('Lớp học đã đầy! Không thể thêm học viên.');
+      } else {
+        message.error(msg || 'Không thể thêm học viên. Vui lòng thử lại.');
+      }
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  // ── Xóa học viên ────────────────────────────────────────────────────────
+  const handleRemoveStudent = async (studentId) => {
+    setRemovingId(studentId);
+    try {
+      await api.delete(`/sessions/${session._id}/students/${studentId}`);
+      message.success('Đã xóa học viên khỏi lớp.');
+      // Gọi lên cha để fetch lại và đồng bộ state
+      await onRefresh();
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      message.error(msg || 'Không thể xóa học viên. Vui lòng thử lại.');
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  // ── Cột bảng học viên ─────────────────────────────────────────────────
+  const studentColumns = [
+    {
+      title: 'STT',
+      key: 'stt',
+      width: 46,
+      align: 'center',
+      render: (_, __, idx) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>{idx + 1}</Text>
+      ),
+    },
+    {
+      title: 'Họ tên',
+      dataIndex: 'name',
+      key: 'name',
+      render: (val) => <Text strong>{val}</Text>,
+    },
+    {
+      title: 'SĐT',
+      dataIndex: 'phone',
+      key: 'phone',
+      width: 120,
+      render: (val) => <Text code style={{ fontSize: 12 }}>{val}</Text>,
+    },
+    {
+      title: 'Tiền cọc',
+      dataIndex: 'depositAmount',
+      key: 'depositAmount',
+      width: 110,
+      align: 'right',
+      render: (val) => {
+        const n = Number(val ?? 0);
+        return (
+          <Text style={{ color: '#1677ff', fontSize: 12 }}>
+            {fmtMoney(n)}
+          </Text>
+        );
+      },
+    },
+    {
+      title: 'Còn nợ',
+      dataIndex: 'remainingAmount',
+      key: 'remainingAmount',
+      width: 110,
+      align: 'right',
+      render: (val) => {
+        const n = Number(val ?? 0);
+        return (
+          <Text style={{ color: n > 0 ? '#d46b08' : '#8c8c8c', fontSize: 12 }}>
+            {fmtMoney(n)}
+          </Text>
+        );
+      },
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'isFullyPaid',
+      key: 'isFullyPaid',
+      width: 110,
+      align: 'center',
+      render: (val) =>
+        val ? (
+          <Tag color="success" style={{ fontWeight: 600 }}>✓ Đã đóng xong</Tag>
+        ) : (
+          <Tag color="orange" style={{ fontWeight: 600 }}>⏳ Còn nợ</Tag>
+        ),
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'paymentNote',
+      key: 'paymentNote',
+      ellipsis: true,
+      render: (val) =>
+        val ? (
+          <Text type="secondary" style={{ fontSize: 12 }}>{val}</Text>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 12 }}>—</Text>
+        ),
+    },
+    {
+      title: 'Đăng ký',
+      dataIndex: 'bookedAt',
+      key: 'bookedAt',
+      width: 110,
+      render: (val) =>
+        val ? (
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            {dayjs(val).format('DD/MM/YY HH:mm')}
+          </Text>
+        ) : '—',
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 52,
+      align: 'center',
+      render: (_, record) => (
+        <Popconfirm
+          title="Xóa học viên"
+          description="Chắc chắn xóa học viên này?"
+          onConfirm={() => handleRemoveStudent(record._id)}
+          okText="Xóa"
+          okButtonProps={{ danger: true }}
+          cancelText="Hủy"
+          placement="topRight"
+          disabled={removingId === record._id}
+        >
+          <Tooltip title="Xóa học viên">
+            <Button
+              type="text"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              loading={removingId === record._id}
+              id={`btn-remove-student-${record._id}`}
+            />
+          </Tooltip>
+        </Popconfirm>
+      ),
+    },
+  ];
+
+  if (!session) return null;
+
+  const students = session.students ?? [];
+  const isFull = session.status !== 'open';
+  const statusCfg = STATUS_CONFIG[session.status] ?? { color: 'default', label: session.status };
+
+  return (
+    <Modal
+      title={
+        <Flex align="center" gap={8}>
+          <span>Chi tiết lớp học</span>
+          <Text code style={{ fontSize: 14 }}>{session.classCode}</Text>
+          <Tag color={statusCfg.color} style={{ marginLeft: 4 }}>{statusCfg.label}</Tag>
+        </Flex>
+      }
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      destroyOnHidden
+      width={1400}
+    >
+      {/* ── Thông tin tóm tắt ──────────────────────────────────────────── */}
+      <Flex
+        gap={36}
+        wrap="wrap"
+        style={{
+          background: '#f5f5f5',
+          borderRadius: 8,
+          padding: '10px 16px',
+          marginBottom: 20,
+          fontSize: 26,
+        }}
+      >
+        <Text>
+          Sĩ số:{' '}
+          <Text
+            strong
+            style={{ color: isFull ? '#cf1322' : '#389e0d' }}
+          >
+            {session.currentBooked}
+          </Text>
+          <Text type="secondary"> / {session.maxCapacity}</Text>
+        </Text>
+
+        <Text>
+          Giờ học: {session.timeSlot}
+        </Text>
+
+        <Text>
+          Ngày học: {formatDates(session.studyDates)}
+        </Text>
+      </Flex>
+
+      {/* ── Phần 1: Form thêm học viên ─────────────────────────────────── */}
+      <Title level={5} style={{ marginBottom: 12 }}>
+        <UserAddOutlined style={{ marginRight: 6, color: '#1677ff' }} />
+        Thêm học viên vào lớp
+      </Title>
+
+      {isFull ? (
+        <div
+          style={{
+            background: '#fff1f0',
+            border: '1px solid #ffa39e',
+            borderRadius: 8,
+            padding: '10px 14px',
+            marginBottom: 20,
+            color: '#cf1322',
+            fontSize: 13,
+          }}
+        >
+          🚫 Lớp học đã đầy hoặc đã đóng, không thể thêm học viên mới.
+        </div>
+      ) : (
+        <Form
+          form={studentForm}
+          layout="vertical"
+          style={{ marginBottom: 4 }}
+          onFinish={handleAddStudent}
+          initialValues={{ depositAmount: 0, remainingAmount: 0, isFullyPaid: false }}
+        >
+          {/* Hàng 1: Họ tên + SĐT + Tiền cọc + Còn nợ */}
+          <Flex gap={12} wrap="wrap">
+            <Form.Item
+              name="name"
+              label="Họ và tên"
+              rules={[{ required: true, message: 'Nhập họ tên' }]}
+              style={{ flex: '2 1 160px', marginBottom: 8 }}
+            >
+              <Input
+                placeholder="Nguyễn Văn A"
+                prefix={<UserAddOutlined style={{ color: '#bbb' }} />}
+                id="input-student-name"
+                autoComplete="off"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="phone"
+              label="Số điện thoại"
+              rules={[
+                { required: true, message: 'Nhập SĐT' },
+                { pattern: /^[0-9+\-\s]{8,15}$/, message: 'SĐT không hợp lệ' },
+              ]}
+              style={{ flex: '1 1 130px', marginBottom: 8 }}
+            >
+              <Input
+                placeholder="0901234567"
+                id="input-student-phone"
+                autoComplete="off"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="depositAmount"
+              label="Tiền cọc (đ)"
+              style={{ flex: '1 1 120px', marginBottom: 8 }}
+            >
+              <InputNumber
+                min={0}
+                step={100000}
+                formatter={(v) => v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+                parser={(v) => v?.replace(/,/g, '') || 0}
+                style={{ width: '100%' }}
+                placeholder="0"
+                id="input-deposit"
+                prefix={<DollarOutlined style={{ color: '#bbb' }} />}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="remainingAmount"
+              label="Còn nợ (đ)"
+              style={{ flex: '1 1 120px', marginBottom: 8 }}
+            >
+              <InputNumber
+                min={0}
+                step={100000}
+                formatter={(v) => v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+                parser={(v) => v?.replace(/,/g, '') || 0}
+                style={{ width: '100%' }}
+                placeholder="0"
+                id="input-remaining"
+              />
+            </Form.Item>
+          </Flex>
+
+          {/* Hàng 2: Ghi chú + Switch thanh toán + Submit */}
+          <Flex gap={12} align="flex-end" wrap="wrap">
+            <Form.Item
+              name="paymentNote"
+              label="Ghi chú thanh toán"
+              style={{ flex: '3 1 200px', marginBottom: 8 }}
+            >
+              <Input
+                placeholder="VD: Chờ chuyển khoản, Đã đóng tiền mặt..."
+                id="input-payment-note"
+                autoComplete="off"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="isFullyPaid"
+              label="Đã đóng xong"
+              valuePropName="checked"
+              style={{ marginBottom: 8 }}
+            >
+              <Switch
+                checkedChildren="✓"
+                unCheckedChildren="✗"
+                id="switch-fully-paid"
+              />
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 8 }}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<PlusOutlined />}
+                loading={booking}
+                id="btn-add-student"
+              >
+                Thêm vào lớp
+              </Button>
+            </Form.Item>
+          </Flex>
+        </Form>
+      )}
+
+      {/* ── Phần 2: Danh sách học viên ─────────────────────────────────── */}
+      <Divider style={{ margin: '8px 0 14px' }} />
+      <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+        <Title level={5} style={{ margin: 0 }}>
+          <TeamOutlined style={{ marginRight: 6, color: '#1677ff' }} />
+          Danh sách lớp
+        </Title>
+        <Badge
+          count={students.length}
+          showZero
+          style={{ backgroundColor: students.length > 0 ? '#1677ff' : '#d9d9d9' }}
+        />
+      </Flex>
+
+      <Table
+        rowKey="_id"
+        dataSource={session?.students ?? []}
+        columns={studentColumns}
+        size="small"
+        scroll={{ x: 820 }}
+        pagination={
+          students.length > 8
+            ? { pageSize: 8, showTotal: (t) => `${t} học viên`, showSizeChanger: false }
+            : false
+        }
+        locale={{
+          emptyText: (
+            <Empty
+              description="Chưa có học viên nào đăng ký."
+              imageStyle={{ height: 48 }}
+            />
+          ),
+        }}
+        style={{ borderRadius: 8, overflow: 'hidden' }}
+      />
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SessionPage — Quản lý Lớp học
-// Giao diện phân cấp: Khóa học → Tháng → Bảng Lớp học
-// Form cascading: Khóa học → Tháng → Ngày học (DatePicker multiple + disabledDate)
 // ─────────────────────────────────────────────────────────────────────────────
 export default function SessionPage() {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
 
   // ── State dữ liệu ──────────────────────────────────────────────────────────
-  const [sessions,   setSessions]   = useState([]);
-  const [campaigns,  setCampaigns]  = useState([]);
-  const [loading,    setLoading]    = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [modalOpen,  setModalOpen]  = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
 
-  // ── State Form cascading ──────────────────────────────────────────────────
-  // selectedCampaignId và selectedMonth dùng để điều khiển Select phụ thuộc
+  // ── State Detail Modal ─────────────────────────────────────────────────────
+  // selectedSession: session đang xem chi tiết (luôn lấy từ state sessions[])
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+
+  // ── State Form cascading ───────────────────────────────────────────────────
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
-  const [selectedMonth,      setSelectedMonth]      = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
 
   // ── State Filter ───────────────────────────────────────────────────────────
-  const [searchCode,   setSearchCode]   = useState('');
+  const [searchCode, setSearchCode] = useState('');
   const [filterStatus, setFilterStatus] = useState(null);
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ── Fetch sessions (Single Source of Truth) ────────────────────────────────
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     try {
@@ -136,6 +568,20 @@ export default function SessionPage() {
     fetchCampaigns();
   }, [fetchSessions, fetchCampaigns]);
 
+  // ── selectedSession: luôn lấy từ sessions state (không tự mutate) ─────────
+  // Đây là điểm mấu chốt chống vỡ UI: khi sessions được fetch lại,
+  // selectedSession tự động cập nhật vì được derive từ sessions[].
+  const selectedSession = useMemo(
+    () => sessions.find((s) => s._id === selectedSessionId) ?? null,
+    [sessions, selectedSessionId]
+  );
+
+  // ── Callback cho DetailModal: fetch lại sessions sau khi thêm/xóa HV ──────
+  // Sau khi fetch xong, selectedSession tự được cập nhật nhờ useMemo trên.
+  const handleDetailRefresh = useCallback(async () => {
+    await fetchSessions();
+  }, [fetchSessions]);
+
   // ── Filter cục bộ ─────────────────────────────────────────────────────────
   const filteredSessions = useMemo(() => {
     let result = sessions;
@@ -149,14 +595,14 @@ export default function SessionPage() {
     return result;
   }, [sessions, searchCode, filterStatus]);
 
-  // ── Nhóm dữ liệu phân cấp (Campaign → Tháng) ─────────────────────────────
+  // ── Nhóm dữ liệu phân cấp ─────────────────────────────────────────────────
   const groupedData = useMemo(
     () => groupSessions(filteredSessions, campaigns),
     [filteredSessions, campaigns]
   );
   const campaignIds = useMemo(() => Object.keys(groupedData), [groupedData]);
 
-  // ── Các tháng của campaign đang chọn trong Form ───────────────────────────
+  // ── Tháng của campaign trong Form ─────────────────────────────────────────
   const monthOptionsForForm = useMemo(() => {
     if (!selectedCampaignId) return [];
     const camp = campaigns.find((c) => c._id === selectedCampaignId);
@@ -175,20 +621,17 @@ export default function SessionPage() {
   const openEdit = (record) => {
     setEditTarget(record);
     const cId = record.campaignId?._id ?? record.campaignId;
-    const cm   = record.campaignMonth;
+    const cm = record.campaignMonth;
     setSelectedCampaignId(cId);
     setSelectedMonth(cm);
-
-    // studyDates → mảng dayjs để DatePicker multiple
     const dayjsDates = (record.studyDates ?? []).map((d) => dayjs(d));
-
     form.setFieldsValue({
-      campaignId:    cId,
+      campaignId: cId,
       campaignMonth: cm,
-      classCode:     record.classCode,
-      timeSlot:      record.timeSlot,
-      maxCapacity:   record.maxCapacity,
-      studyDates:    dayjsDates,
+      classCode: record.classCode,
+      timeSlot: record.timeSlot,
+      maxCapacity: record.maxCapacity,
+      studyDates: dayjsDates,
     });
     setModalOpen(true);
   };
@@ -205,7 +648,6 @@ export default function SessionPage() {
     let values;
     try { values = await form.validateFields(); } catch { return; }
 
-    // Chuyển mảng dayjs → ISO string
     const rawDates = values.studyDates;
     if (!rawDates || rawDates.length === 0) {
       message.error('Vui lòng chọn ít nhất một ngày học.');
@@ -216,12 +658,12 @@ export default function SessionPage() {
     setSubmitting(true);
     try {
       const payload = {
-        campaignId:    values.campaignId,
+        campaignId: values.campaignId,
         campaignMonth: values.campaignMonth,
-        classCode:     values.classCode.trim().toUpperCase(),
-        timeSlot:      values.timeSlot.trim(),
-        maxCapacity:   values.maxCapacity,
-        studyDates:    isoStudyDates,
+        classCode: values.classCode.trim().toUpperCase(),
+        timeSlot: values.timeSlot.trim(),
+        maxCapacity: values.maxCapacity,
+        studyDates: isoStudyDates,
       };
 
       if (editTarget) {
@@ -236,9 +678,9 @@ export default function SessionPage() {
       fetchSessions();
     } catch (err) {
       modal.error({
-        title:   'Không thể lưu lớp học',
-        content: err.message || 'Đã xảy ra lỗi. Vui lòng thử lại.',
-        okText:  'Đã hiểu',
+        title: 'Không thể lưu lớp học',
+        content: err.response?.data?.message || err.message || 'Đã xảy ra lỗi.',
+        okText: 'Đã hiểu',
       });
     } finally {
       setSubmitting(false);
@@ -251,18 +693,26 @@ export default function SessionPage() {
       message.success(`Đã xóa lớp học "${record.classCode}".`);
       fetchSessions();
     } catch (err) {
-      message.error(err.message || 'Không thể xóa lớp học.');
+      message.error(err.response?.data?.message || err.message || 'Không thể xóa lớp học.');
     }
   };
 
-  // ── Handler cascade: Khi đổi Campaign → reset Month + studyDates ──────────
+  // ── Mở Detail Modal ────────────────────────────────────────────────────────
+  const openDetail = (record) => {
+    setSelectedSessionId(record._id);
+  };
+
+  const closeDetail = () => {
+    setSelectedSessionId(null);
+  };
+
+  // ── Handler cascade ────────────────────────────────────────────────────────
   const onCampaignChange = (cId) => {
     setSelectedCampaignId(cId ?? null);
     setSelectedMonth(null);
     form.setFieldsValue({ campaignMonth: undefined, studyDates: [] });
   };
 
-  // ── Handler cascade: Khi đổi Month → reset studyDates ────────────────────
   const onMonthChange = (month) => {
     setSelectedMonth(month ?? null);
     form.setFieldsValue({ studyDates: [] });
@@ -271,24 +721,25 @@ export default function SessionPage() {
   // ── Cột bảng Session ──────────────────────────────────────────────────────
   const sessionColumns = [
     {
-      title:  'Mã lớp',
+      title: 'Mã lớp',
       dataIndex: 'classCode',
-      key:    'classCode',
-      width:  100,
+      key: 'classCode',
+      width: 100,
       render: (val) => <Text strong code>{val}</Text>,
     },
     {
-      title:  'Khung giờ',
+      title: 'Khung giờ',
       dataIndex: 'timeSlot',
-      key:    'timeSlot',
-      width:  145,
+      key: 'timeSlot',
+      width: 180,
       render: (val) => <Tag color="geekblue">{val}</Tag>,
     },
     {
-      title:   'Ngày học',
-      key:     'studyDates',
+      title: 'Ngày học',
+      key: 'studyDates',
+      width: 190,
       ellipsis: true,
-      render:  (_, record) => (
+      render: (_, record) => (
         <Tooltip
           title={record.studyDates?.map((d) => dayjs(d).format('DD/MM/YYYY')).join(' · ')}
         >
@@ -297,10 +748,10 @@ export default function SessionPage() {
       ),
     },
     {
-      title:  'Sĩ số',
-      key:    'capacity',
-      width:  100,
-      align:  'center',
+      title: 'Sĩ số',
+      key: 'capacity',
+      width: 90,
+      align: 'center',
       render: (_, record) => (
         <Text>
           <Text
@@ -314,26 +765,40 @@ export default function SessionPage() {
       ),
     },
     {
-      title:  'Trạng thái',
+      title: 'Trạng thái',
       dataIndex: 'status',
-      key:    'status',
-      width:  100,
-      align:  'center',
+      key: 'status',
+      width: 95,
+      align: 'center',
       render: (val) => {
         const cfg = STATUS_CONFIG[val] ?? { color: 'default', label: val };
         return <Tag color={cfg.color} style={{ fontWeight: 600 }}>{cfg.label}</Tag>;
       },
     },
     {
-      title:  'Thao tác',
-      key:    'actions',
-      width:  90,
-      align:  'center',
-      fixed:  'right',
+      title: 'Thao tác',
+      key: 'actions',
+      width: 120,
+      align: 'center',
+      fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
+          <Tooltip title="Chi tiết học viên">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              style={{ color: '#1677ff' }}
+              onClick={() => openDetail(record)}
+              id={`btn-detail-${record._id}`}
+            />
+          </Tooltip>
           <Tooltip title="Chỉnh sửa">
-            <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => openEdit(record)}
+              id={`btn-edit-${record._id}`}
+            />
           </Tooltip>
           <Popconfirm
             title="Xác nhận xóa"
@@ -345,7 +810,12 @@ export default function SessionPage() {
             placement="topLeft"
           >
             <Tooltip title="Xóa">
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                id={`btn-delete-${record._id}`}
+              />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -353,36 +823,26 @@ export default function SessionPage() {
     },
   ];
 
-  // ── Build cấu trúc Tabs phân cấp ──────────────────────────────────────────
+  // ── Build Tabs phân cấp Campaign → Tháng ──────────────────────────────────
   const campaignTabs = useMemo(() => {
     if (campaignIds.length === 0) return [];
 
     return campaignIds.map((cId) => {
       const { campaign, months, orderedMonths } = groupedData[cId];
 
-      // Sắp xếp tháng theo thứ tự orderedMonths của Campaign
       const sortedMonthKeys = [
-        ...orderedMonths.filter((m) => months[m]),  // Tháng có dữ liệu, giữ đúng thứ tự
-        ...Object.keys(months).filter((m) => !orderedMonths.includes(m)), // Tháng orphan
+        ...orderedMonths.filter((m) => months[m]),
+        ...Object.keys(months).filter((m) => !orderedMonths.includes(m)),
       ];
-
-      const totalSessions = Object.values(months).reduce(
-        (sum, m) => sum + m.sessions.length, 0
-      );
 
       const monthTabs = sortedMonthKeys.map((mk) => {
         const { label, sessions: mSessions } = months[mk];
         return {
-          key:   mk,
+          key: mk,
           label: (
             <span>
-              <CalendarOutlined style={{ marginRight: 5 }} />
+              {/* <CalendarOutlined style={{ marginRight: 5 }} /> */}
               {label}
-              <Badge
-                count={mSessions.length}
-                size="small"
-                style={{ marginLeft: 6, backgroundColor: '#1D1D1F' }}
-              />
             </span>
           ),
           children: (
@@ -391,7 +851,7 @@ export default function SessionPage() {
               dataSource={mSessions}
               columns={sessionColumns}
               size="small"
-              scroll={{ x: 700 }}
+              scroll={{ x: 750 }}
               pagination={
                 mSessions.length > 8
                   ? { pageSize: 8, showTotal: (t) => `${t} lớp`, showSizeChanger: false }
@@ -403,33 +863,32 @@ export default function SessionPage() {
         };
       });
 
-      const tabLabel = (
-        <span>
-          <TeamOutlined style={{ marginRight: 6 }} />
-          {campaign.title}
-          <Badge
-            count={totalSessions}
-            size="small"
-            style={{ marginLeft: 6, backgroundColor: '#595959' }}
-          />
-        </span>
-      );
-
       return {
-        key:   cId,
-        label: tabLabel,
+        key: cId,
+        label: (
+          <span>
+            {/* <TeamOutlined style={{ marginRight: 6 }} /> */}
+            {campaign.title}
+          </span>
+        ),
         children: (
           <div style={{ paddingTop: 4 }}>
             {monthTabs.length === 0 ? (
               <Empty description="Khóa học này chưa có lớp học nào." />
             ) : (
-              <Tabs type="card" size="small" items={monthTabs} style={{ marginTop: 4 }} />
+              <Tabs
+                type="card"
+                size="small"
+                items={monthTabs}
+                className="month-tabs"
+                style={{ marginTop: 4 }}
+              />
             )}
           </div>
         ),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupedData, campaignIds]);
 
   const hasActiveFilter = searchCode.trim() || filterStatus;
@@ -464,7 +923,6 @@ export default function SessionPage() {
         }}
       >
         <FilterOutlined style={{ color: '#888', fontSize: 15 }} />
-
         <Input.Search
           placeholder="Tìm theo mã lớp..."
           allowClear
@@ -474,7 +932,6 @@ export default function SessionPage() {
           style={{ width: 220 }}
           id="search-session-code"
         />
-
         <Select
           placeholder="Lọc trạng thái"
           allowClear
@@ -483,18 +940,20 @@ export default function SessionPage() {
           style={{ width: 150 }}
           id="filter-session-status"
           options={[
-            { value: 'open',   label: '🟢  Mở'  },
-            { value: 'full',   label: '🔴  Đầy' },
+            { value: 'open', label: '🟢  Mở' },
+            { value: 'full', label: '🔴  Đầy' },
             { value: 'closed', label: '⚫  Đóng' },
           ]}
         />
-
         {hasActiveFilter && (
           <Flex align="center" gap={8}>
             <Text type="secondary" style={{ fontSize: 13 }}>
               Đang lọc — <Text strong>{filteredSessions.length}</Text> lớp
             </Text>
-            <Button size="small" onClick={() => { setSearchCode(''); setFilterStatus(null); }}>
+            <Button
+              size="small"
+              onClick={() => { setSearchCode(''); setFilterStatus(null); }}
+            >
               Xóa bộ lọc
             </Button>
           </Flex>
@@ -514,24 +973,35 @@ export default function SessionPage() {
           style={{ padding: '48px 0' }}
         />
       ) : (
-        <Tabs
-          type="line"
-          items={campaignTabs}
-          tabBarStyle={{ marginBottom: 0 }}
-          style={{
-            background: '#fff',
-            borderRadius: 8,
-            border: '1px solid #f0f0f0',
-            padding: '0 16px 16px',
+        <ConfigProvider
+          theme={{
+            components: {
+              Tabs: {
+                itemSelectedColor: '#1677ff', // Màu chữ xanh khi active (cả 2 cấp Tab)
+                itemHoverColor: '#69b1ff',    // Xanh nhạt khi hover
+                inkBarColor: '#1677ff',       // Thanh underline Tab cấp 1
+              },
+            },
           }}
-        />
+        >
+          <Tabs
+            type="line"
+            items={campaignTabs}
+            tabBarStyle={{ marginBottom: 0 }}
+            style={{
+              background: '#fff',
+              borderRadius: 8,
+              border: '1px solid #f0f0f0',
+              padding: '0 16px 16px',
+            }}
+          />
+        </ConfigProvider>
       )}
 
-      {/* ── Modal Thêm / Sửa (Cascading Form) ──────────────────────────── */}
+      {/* ── Modal Thêm / Sửa ─────────────────────────────────────────────── */}
       <Modal
         title={
           <Space>
-            {editTarget ? <EditOutlined /> : <PlusOutlined />}
             {editTarget ? `Sửa lớp học ${editTarget.classCode}` : 'Thêm Lớp học mới'}
           </Space>
         }
@@ -546,7 +1016,6 @@ export default function SessionPage() {
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }} requiredMark="optional">
 
-          {/* ── Trường 1: Chọn Khóa học ──────────────────────────────── */}
           <Form.Item
             name="campaignId"
             label="Khóa học"
@@ -559,14 +1028,10 @@ export default function SessionPage() {
               onChange={onCampaignChange}
               allowClear
               id="select-campaign"
-              options={campaigns.map((c) => ({
-                value: c._id,
-                label: c.title,
-              }))}
+              options={campaigns.map((c) => ({ value: c._id, label: c.title }))}
             />
           </Form.Item>
 
-          {/* ── Trường 2: Chọn Tháng (phụ thuộc Khóa học đã chọn) ────── */}
           <Form.Item
             name="campaignMonth"
             label="Tháng học"
@@ -584,7 +1049,6 @@ export default function SessionPage() {
           </Form.Item>
 
           <Flex gap={12}>
-            {/* Mã lớp */}
             <Form.Item
               name="classCode"
               label="Mã lớp"
@@ -599,7 +1063,6 @@ export default function SessionPage() {
               />
             </Form.Item>
 
-            {/* Sĩ số */}
             <Form.Item
               name="maxCapacity"
               label="Sĩ số tối đa"
@@ -615,7 +1078,6 @@ export default function SessionPage() {
             </Form.Item>
           </Flex>
 
-          {/* Khung giờ */}
           <Form.Item
             name="timeSlot"
             label="Khung giờ học"
@@ -634,7 +1096,6 @@ export default function SessionPage() {
             />
           </Form.Item>
 
-          {/* ── Trường 3: Chọn Ngày học (DatePicker multiple + disabledDate) ── */}
           <Form.Item
             name="studyDates"
             label="Ngày học"
@@ -644,10 +1105,10 @@ export default function SessionPage() {
                 : `Chỉ có thể chọn ngày trong tháng ${selectedMonth}.`
             }
             rules={[{
-              required:  true,
-              type:      'array',
-              min:       1,
-              message:   'Vui lòng chọn ít nhất một ngày học.',
+              required: true,
+              type: 'array',
+              min: 1,
+              message: 'Vui lòng chọn ít nhất một ngày học.',
             }]}
           >
             <DatePicker
@@ -664,6 +1125,14 @@ export default function SessionPage() {
 
         </Form>
       </Modal>
+
+      {/* ── Modal Chi tiết học viên ──────────────────────────────────────── */}
+      <DetailModal
+        open={!!selectedSession}
+        session={selectedSession}
+        onClose={closeDetail}
+        onRefresh={handleDetailRefresh}
+      />
     </>
   );
 }

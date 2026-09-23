@@ -1,2 +1,12 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; background-color: #F5F5F7; }
+
+/* ── Month Tabs (cấp 2): làm nổi bật tab tháng đang active ── */
+.month-tabs .ant-tabs-tab-active {
+  border-color: #1677ff !important;
+  background-color: #e6f4ff !important; /* Nền xanh cực nhạt, đồng tông với tag Khung giờ */
+}
+.month-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1677ff !important;
+  font-weight: 600;
+}

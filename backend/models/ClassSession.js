@@ -55,6 +55,53 @@ const mongoose = require('mongoose');
  *   Các request còn lại nhận về null và bị từ chối ngay lập tức.
  * ============================================================
  */
+/**
+ * Sub-schema: Student
+ * Lưu thông tin một học viên đã đăng ký vào ca học.
+ */
+const studentSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Họ tên học viên là bắt buộc'],
+      trim: true,
+    },
+    phone: {
+      type: String,
+      required: [true, 'Số điện thoại học viên là bắt buộc'],
+      trim: true,
+    },
+    /** Số tiền đặt cọc (VND). Optional, mặc định 0. */
+    depositAmount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Tiền cọc không thể âm'],
+    },
+    /** Số tiền còn phải đóng thêm (VND). Optional, mặc định 0. */
+    remainingAmount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Tiền còn nợ không thể âm'],
+    },
+    /** true = đã đóng đủ học phí. */
+    isFullyPaid: {
+      type: Boolean,
+      default: false,
+    },
+    /** Ghi chú tuỳ ý của admin (VD: "Chờ chuyển khoản", "Đóng tiền mặt"). */
+    paymentNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    bookedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
 const classSessionSchema = new mongoose.Schema(
   {
     /**
@@ -156,6 +203,16 @@ const classSessionSchema = new mongoose.Schema(
      * $inc thành công (nếu currentBooked === maxCapacity → status = 'full').
      * Ngoài ra dùng làm điều kiện lọc trong atomic query (status: 'open').
      */
+    /**
+     * students: Danh sách học viên đã đăng ký vào ca học.
+     * Mỗi phần tử là một studentSchema object { name, phone, bookedAt }.
+     * Được cập nhật bằng $push nguyên tử cùng lúc với $inc currentBooked.
+     */
+    students: {
+      type: [studentSchema],
+      default: [],
+    },
+
     status: {
       type: String,
       enum: {

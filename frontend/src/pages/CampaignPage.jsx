@@ -38,14 +38,14 @@ export default function CampaignPage() {
   const [form] = Form.useForm();
 
   // ── State dữ liệu ──────────────────────────────────────────────────────────
-  const [campaigns,  setCampaigns]  = useState([]);
-  const [loading,    setLoading]    = useState(false);
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [modalOpen,  setModalOpen]  = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
 
   // ── State Filter ───────────────────────────────────────────────────────────
-  const [searchText,  setSearchText]  = useState('');
+  const [searchText, setSearchText] = useState('');
   const [filterMonth, setFilterMonth] = useState(null); // 'MM/YYYY' | null
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
@@ -97,9 +97,9 @@ export default function CampaignPage() {
   const openEdit = (record) => {
     setEditTarget(record);
     form.setFieldsValue({
-      title:       record.title,
+      title: record.title,
       description: record.description,
-      months:      record.months ?? [],
+      months: record.months ?? [],
     });
     setModalOpen(true);
   };
@@ -117,9 +117,9 @@ export default function CampaignPage() {
     setSubmitting(true);
     try {
       const payload = {
-        title:       values.title.trim(),
+        title: values.title.trim(),
         description: values.description?.trim() ?? '',
-        months:      values.months, // Mảng 'MM/YYYY'
+        months: values.months, // Mảng 'MM/YYYY'
       };
 
       if (editTarget) {
@@ -146,9 +146,9 @@ export default function CampaignPage() {
       fetchCampaigns();
     } catch (err) {
       modal.error({
-        title:   'Không thể xóa',
+        title: 'Không thể xóa',
         content: err.message || 'Có lỗi xảy ra khi xóa khóa học.',
-        okText:  'Đã hiểu',
+        okText: 'Đã hiểu',
       });
     }
   };
@@ -156,24 +156,24 @@ export default function CampaignPage() {
   // ── Cột bảng ──────────────────────────────────────────────────────────────
   const columns = [
     {
-      title:     'Tiêu đề',
+      title: 'Tiêu đề',
       dataIndex: 'title',
-      key:       'title',
-      ellipsis:  true,
-      render:    (text) => <Text strong>{text}</Text>,
+      key: 'title',
+      ellipsis: true,
+      render: (text) => <Text strong>{text}</Text>,
     },
     {
-      title:     'Mô tả',
+      title: 'Mô tả',
       dataIndex: 'description',
-      key:       'description',
-      ellipsis:  true,
-      render:    (text) => text || <Text type="secondary">—</Text>,
+      key: 'description',
+      ellipsis: true,
+      render: (text) => text || <Text type="secondary">—</Text>,
     },
     {
-      title:     'Các tháng học',
+      title: 'Các tháng học',
       dataIndex: 'months',
-      key:       'months',
-      render:    (months) =>
+      key: 'months',
+      render: (months) =>
         Array.isArray(months) && months.length > 0 ? (
           <Space size={4} wrap>
             {months.map((m) => (
@@ -187,19 +187,19 @@ export default function CampaignPage() {
         ),
     },
     {
-      title:  'Ngày tạo',
+      title: 'Ngày tạo',
       dataIndex: 'createdAt',
-      key:    'createdAt',
-      width:  155,
-      align:  'center',
+      key: 'createdAt',
+      width: 155,
+      align: 'center',
       render: (val) => val ? dayjs(val).format('DD/MM/YYYY HH:mm') : '—',
     },
     {
-      title:  'Thao tác',
-      key:    'actions',
-      width:  100,
-      align:  'center',
-      fixed:  'right',
+      title: 'Thao tác',
+      key: 'actions',
+      width: 100,
+      align: 'center',
+      fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
           <Tooltip title="Chỉnh sửa">
@@ -292,8 +292,8 @@ export default function CampaignPage() {
         columns={columns}
         loading={loading}
         pagination={{
-          pageSize:        10,
-          showTotal:       (total) => `${total} / ${campaigns.length} khóa học`,
+          pageSize: 10,
+          showTotal: (total) => `${total} / ${campaigns.length} khóa học`,
           showSizeChanger: false,
         }}
         scroll={{ x: 750 }}
@@ -309,7 +309,6 @@ export default function CampaignPage() {
       <Modal
         title={
           <Space>
-            {editTarget ? <EditOutlined /> : <PlusOutlined />}
             {editTarget ? 'Chỉnh sửa Khóa học' : 'Thêm Khóa học mới'}
           </Space>
         }
@@ -320,7 +319,7 @@ export default function CampaignPage() {
         cancelText="Hủy"
         confirmLoading={submitting}
         destroyOnHidden
-        width={520}
+        width={620}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }} requiredMark="optional">
 

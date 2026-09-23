@@ -496,53 +496,82 @@ const deleteSession = async (req, res) => {
 const bookSlot = async (req, res) => {
   try {
     const { id: sessionId } = req.params;
+    const { name, phone, depositAmount, remainingAmount, isFullyPaid, paymentNote } = req.body;
 
-    // ── Bước 1: Atomic update ─────────────────────────────────────────────
+    // ── Bước 1: Validate dữ liệu học viên ────────────────────────────────
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Họ tên học viên là bắt buộc.' });
+    }
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({ success: false, message: 'Số điện thoại học viên là bắt buộc.' });
+    }
+
+    const newStudent = {
+      name: name.trim(),
+      phone: phone.trim(),
+      depositAmount: Number(depositAmount) || 0,
+      remainingAmount: Number(remainingAmount) || 0,
+      isFullyPaid: Boolean(isFullyPaid),
+      paymentNote: (paymentNote ?? '').trim(),
+      bookedAt: new Date(),
+    };
+
+    // ── Bước 2: Atomic update — $push học viên + $inc currentBooked ───────
+    // Một lệnh duy nhất, đảm bảo nguyên tử: chỉ thành công khi status='open'
+    // VÀ currentBooked < maxCapacity (atomic guard qua $expr).
     const updatedSession = await ClassSession.findOneAndUpdate(
       {
         _id: sessionId,
         status: 'open',
         $expr: { $lt: ['$currentBooked', '$maxCapacity'] }, // Điều kiện nguyên tử
       },
-      { $inc: { currentBooked: 1 } },
+      {
+        $inc: { currentBooked: 1 },       // Tăng sĩ số nguyên tử
+        $push: { students: newStudent },   // Thêm học viên vào danh sách
+      },
       { new: true, runValidators: true }
-    );
+    ).populate('campaignId', 'title months'); // Populate để Frontend không bị vỡ data
 
-    // ── Bước 2: Kiểm tra kết quả ──────────────────────────────────────────
+    // ── Bước 3: Kiểm tra kết quả ──────────────────────────────────────────
     // null → không document nào thỏa filter → ca đã đầy HOẶC đã đóng
     if (!updatedSession) {
       return res.status(409).json({
         success: false,
-        message: 'Slot đã đầy hoặc lớp   học đã đóng. Không thể chốt thêm.',
+        message: 'Slot đã đầy hoặc lớp học đã đóng. Không thể chốt thêm.',
       });
     }
 
-    // ── Bước 3: Tự động chuyển status → 'full' nếu vừa đạt maxCapacity ───
+    // ── Bước 4: Tự động chuyển status → 'full' nếu vừa đạt maxCapacity ───
     if (updatedSession.currentBooked >= updatedSession.maxCapacity) {
       await ClassSession.updateOne({ _id: sessionId }, { $set: { status: 'full' } });
       updatedSession.status = 'full';
     }
 
-    // ── Bước 4: Ghi AuditLog ─────────────────────────────────────────────
-    await AuditLog.create({
-      adminId: resolveAdminId(req.body.adminId),
-      actionType: 'SESSION_BOOK',
-      targetClass: updatedSession.classCode,
-      metadata: {
-        sessionId: updatedSession._id,
-        currentBooked: updatedSession.currentBooked,
-        maxCapacity: updatedSession.maxCapacity,
-        newStatus: updatedSession.status,
-      },
-      timestamp: new Date(),
-    });
+    // ── Bước 5: Ghi AuditLog ─────────────────────────────────────────────
+    try {
+      await AuditLog.create({
+        adminId: resolveAdminId(req.body.adminId),
+        actionType: 'SESSION_BOOK',
+        targetClass: updatedSession.classCode,
+        metadata: {
+          sessionId: updatedSession._id,
+          student: { name: newStudent.name, phone: newStudent.phone },
+          currentBooked: updatedSession.currentBooked,
+          maxCapacity: updatedSession.maxCapacity,
+          newStatus: updatedSession.status,
+        },
+        timestamp: new Date(),
+      });
+    } catch (logErr) {
+      console.warn('[bookSlot] AuditLog failed (non-critical):', logErr.message);
+    }
 
     // TODO: Emit Socket.io event để broadcast real-time cho tất cả client
     // io.emit('session_updated', updatedSession);
 
     return res.status(200).json({
       success: true,
-      message: `Chốt slot thành công cho ca ${updatedSession.classCode}.`,
+      message: `Đã thêm học viên "${newStudent.name}" vào ca ${updatedSession.classCode}.`,
       data: updatedSession,
     });
   } catch (error) {
@@ -617,6 +646,84 @@ const unbookSlot = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// removeStudent — DELETE /api/sessions/:sessionId/students/:studentId
+//
+// Xóa một học viên khỏi danh sách đăng ký của ca học.
+//
+// LUỒNG XỬ LÝ ATOMIC:
+//   Dùng $pull để xóa sub-document khỏi mảng students VÀ $inc: { currentBooked: -1 }
+//   trong cùng một lệnh findOneAndUpdate() để đảm bảo nguyên tử.
+//   Guard: currentBooked > 0 để không giảm xuống âm.
+// ─────────────────────────────────────────────────────────────────────────────
+const removeStudent = async (req, res) => {
+  try {
+    const { sessionId, studentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+      return res.status(400).json({ success: false, message: 'sessionId không hợp lệ.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({ success: false, message: 'studentId không hợp lệ.' });
+    }
+
+    // ── Atomic: $pull học viên + $inc currentBooked ────────────────────────
+    const updatedSession = await ClassSession.findOneAndUpdate(
+      {
+        _id: sessionId,
+        'students._id': studentId,           // Đảm bảo học viên tồn tại
+        $expr: { $gt: ['$currentBooked', 0] }, // Guard: không giảm xuống âm
+      },
+      {
+        $pull: { students: { _id: studentId } }, // Xóa học viên khỏi mảng
+        $inc: { currentBooked: -1 },              // Giảm sĩ số nguyên tử
+      },
+      { new: true, runValidators: true }
+    ).populate('campaignId', 'title months');
+
+    if (!updatedSession) {
+      // Có thể học viên không tồn tại hoặc currentBooked đã = 0
+      const session = await ClassSession.findById(sessionId).lean();
+      if (!session) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy lớp học.' });
+      }
+      return res.status(404).json({ success: false, message: 'Không tìm thấy học viên trong lớp học này.' });
+    }
+
+    // ── Tự động chuyển status → 'open' nếu vừa mở chỗ trống ──────────────
+    if (updatedSession.currentBooked < updatedSession.maxCapacity && updatedSession.status === 'full') {
+      await ClassSession.updateOne({ _id: sessionId }, { $set: { status: 'open' } });
+      updatedSession.status = 'open';
+    }
+
+    // ── Ghi AuditLog ──────────────────────────────────────────────────────
+    try {
+      await AuditLog.create({
+        adminId: resolveAdminId(req.body?.adminId),
+        actionType: 'SESSION_STUDENT_REMOVE',
+        targetClass: updatedSession.classCode,
+        metadata: {
+          sessionId: updatedSession._id,
+          studentId,
+          currentBooked: updatedSession.currentBooked,
+          newStatus: updatedSession.status,
+        },
+        timestamp: new Date(),
+      });
+    } catch (logErr) {
+      console.warn('[removeStudent] AuditLog failed (non-critical):', logErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã xóa học viên khỏi lớp học.',
+      data: updatedSession,
+    });
+  } catch (error) {
+    return handleServerError(res, 'removeStudent', error);
+  }
+};
+
 module.exports = {
   getAllSessions,
   createSession,
@@ -624,4 +731,5 @@ module.exports = {
   deleteSession,
   bookSlot,
   unbookSlot,
+  removeStudent,
 };

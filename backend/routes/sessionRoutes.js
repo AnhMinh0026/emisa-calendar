@@ -10,6 +10,7 @@ const {
   deleteSession,
   bookSlot,
   unbookSlot,
+  removeStudent,
 } = require('../controllers/sessionController');
 
 // GET    /api/sessions           → Lấy danh sách lớp học (có populate Campaign)
@@ -32,5 +33,9 @@ router.post('/:id/book', bookSlot);
 
 // POST   /api/sessions/:id/unbook → Hủy 1 slot (atomic $inc -1, tự đổi status)
 router.post('/:id/unbook', unbookSlot);
+
+// DELETE /api/sessions/:sessionId/students/:studentId → Xóa học viên khỏi lớp
+// Dùng $pull học viên + $inc currentBooked -1 trong cùng một lệnh atomic.
+router.delete('/:sessionId/students/:studentId', removeStudent);
 
 module.exports = router;
