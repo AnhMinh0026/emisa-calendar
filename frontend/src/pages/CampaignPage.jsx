@@ -329,7 +329,7 @@ export default function CampaignPage() {
             rules={[{ required: true, message: 'Vui lòng nhập tiêu đề khóa học.' }]}
           >
             <Input
-              placeholder="VD: Khoá Hè Q3 2026"
+              placeholder="VD: Khoá cơ bản"
               maxLength={100} showCount
               id="input-campaign-title"
             />

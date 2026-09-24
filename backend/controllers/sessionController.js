@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const mongoose = require('mongoose');
 const ClassSession = require('../models/ClassSession');
@@ -93,49 +93,90 @@ const hasTimeConflict = (startNew, endNew, startOld, endOld) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: checkScheduleConflict
+// HELPER: checkTimeOverlap
 //
-// Tái sử dụng logic kiểm tra xung đột cho cả createSession và updateSession.
+// Kiểm tra hai khung giờ có GIÀO NHAU không (không buffer).
+// Công thức chuẩn: start1 < end2 && start2 < end1
 //
-// @param {string}   campaignId    - ID khóa học
-// @param {Date[]}   parsedDates   - Mảng ngày đã parse
-// @param {number}   startNew      - Phút bắt đầu ca cần kiểm tra
-// @param {number}   endNew        - Phút kết thúc ca cần kiểm tra
-// @param {string}   [excludeId]   - sessionId cần bỏ qua (dùng khi update)
-// @param {string}   timeSlot      - Chuỗi timeSlot gốc (cho message lỗi)
-// @returns {object|null} Trả về object lỗi nếu có xung đột, null nếu không
+// Đầu vào là chuỗi timeSlot 'HH:mm - HH:mm', cover trường hợp dư khoảng trắng.
+// @param {string} timeSlot1 - VD: '18:00 - 20:30'
+// @param {string} timeSlot2 - VD: '20:00 - 22:00'
+// @returns {boolean}        true nếu hai khung giờ giao nhau
 // ─────────────────────────────────────────────────────────────────────────────
-const checkScheduleConflict = async (campaignId, parsedDates, startNew, endNew, timeSlot, excludeId = null) => {
-  const filter = {
-    campaignId,
-    studyDates: { $elemMatch: { $in: parsedDates } },
-  };
+const checkTimeOverlap = (timeSlot1, timeSlot2) => {
+  const slot1 = parseTimeSlot(timeSlot1);
+  const slot2 = parseTimeSlot(timeSlot2);
+  // Nếu không parse được → không thể xác định → coi là không giao (bỏ qua)
+  if (!slot1 || !slot2) return false;
+  // Giao nhau khi và chỉ khi: start1 < end2 và start2 < end1
+  return slot1.start < slot2.end && slot2.start < slot1.end;
+};
 
-  // Khi update: bỏ qua chính ca đang được sửa để không tự xung đột với mình
-  if (excludeId) {
-    filter._id = { $ne: excludeId };
-  }
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: formatToLocalYYYYMMDD
+// Chuyển đổi an toàn sang YYYY-MM-DD theo múi giờ Việt Nam (UTC+7)
+// ─────────────────────────────────────────────────────────────────────────────
+const formatToLocalYYYYMMDD = (dateVal) => {
+  const d = new Date(dateVal);
+  // Cộng bù 7 tiếng (25,200,000 ms) để triệt tiêu việc .toISOString() lùi về UTC
+  const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  return vnTime.toISOString().slice(0, 10);
+};
 
-  const candidates = await ClassSession.find(filter).lean();
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: checkScheduleConflict
+// Kiểm tra xung đột lịch TOÀN HỆ THỐNG và trả về thông báo chi tiết.
+// Đã xử lý triệt để lỗi Timezone (UTC+7).
+// ─────────────────────────────────────────────────────────────────────────────
+const checkScheduleConflict = async (parsedDates, timeSlot, excludeId = null) => {
+  // 1. Chuẩn hóa ngày mới (đã triệt tiêu lệch múi giờ)
+  const newDateStrings = parsedDates.map(formatToLocalYYYYMMDD);
 
-  for (const existing of candidates) {
-    const parsed = parseTimeSlot(existing.timeSlot);
-    if (!parsed) continue; // Dữ liệu cũ không chuẩn → bỏ qua
+  // 2. Kéo toàn bộ dữ liệu lớp học lên (loại trừ lớp đang sửa nếu có)
+  const query = excludeId ? { _id: { $ne: excludeId } } : {};
+  const allSessions = await ClassSession.find(query)
+    .populate('campaignId', 'title')
+    .select('classCode timeSlot studyDates campaignId')
+    .lean();
 
-    if (hasTimeConflict(startNew, endNew, parsed.start, parsed.end)) {
-      return {
-        success: false,
-        message: `Xung đột lịch! Lớp học (${timeSlot}) không đảm bảo buffer ${BUFFER_MINUTES} phút với lớp học "${existing.classCode}" (${existing.timeSlot}) diễn ra cùng ngày.`,
-        conflictWith: {
-          classCode: existing.classCode,
-          timeSlot: existing.timeSlot,
-          studyDates: existing.studyDates,
-        },
-      };
+  // 3. Quét vòng lặp kiểm tra
+  for (const session of allSessions) {
+    // Ưu tiên check trùng khung giờ trước
+    if (checkTimeOverlap(timeSlot, session.timeSlot)) {
+      // Chuẩn hóa ngày trong DB với cùng offset +7
+      const existingDateStrings = (session.studyDates || []).map(formatToLocalYYYYMMDD);
+
+      // Tìm các ngày thực sự giao nhau
+      const overlappedDates = newDateStrings.filter((ds) => existingDateStrings.includes(ds));
+
+      // Nếu có ít nhất 1 ngày trùng -> Chặn ngay lập tức
+      if (overlappedDates.length > 0) {
+        // Format lại ngày để hiển thị thông báo lỗi (DD/MM/YYYY)
+        const fmtDate = (iso) => {
+          const [y, m, d] = iso.split('-');
+          return `${d}/${m}/${y}`;
+        };
+        const overlappedFormatted = overlappedDates.map(fmtDate).join(', ');
+
+        const campaignTitle = session.campaignId?.title || '(Khóa học không xác định)';
+        const errorMsg = `Trùng lịch với Lớp ${session.classCode} (${campaignTitle}) vào các ngày: ${overlappedFormatted} (Khung giờ: ${session.timeSlot}).`;
+
+        return {
+          success: false,
+          message: errorMsg,
+          conflictWith: {
+            classCode: session.classCode,
+            campaignTitle,
+            timeSlot: session.timeSlot,
+            overlappedDates,
+          },
+        };
+      }
     }
   }
 
-  return null; // Không có xung đột
+  // Chạy hết vòng lặp mà không vướng ai -> Hợp lệ
+  return null;
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -222,7 +263,7 @@ const createSession = async (req, res) => {
     });
     if (invalidDates.length > 0) {
       const formatted = invalidDates.map((d) =>
-        `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+        `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
       );
       return res.status(400).json({
         success: false,
@@ -241,7 +282,7 @@ const createSession = async (req, res) => {
 
     // ── Kiểm tra xung đột lịch (SRS 4.1) ─────────────────────────────────
     const conflict = await checkScheduleConflict(
-      campaignId, parsedDates, parsedSlot.start, parsedSlot.end, timeSlot
+      parsedDates, timeSlot
     );
     if (conflict) return res.status(400).json(conflict);
 
@@ -372,7 +413,7 @@ const updateSession = async (req, res) => {
         );
         if (wrongDates.length > 0) {
           const formatted = wrongDates.map((d) =>
-            `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+            `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
           );
           return res.status(400).json({
             success: false,
@@ -391,10 +432,7 @@ const updateSession = async (req, res) => {
 
       // Kiểm tra xung đột, BỎ QUA chính ca đang sửa ({ _id: { $ne: sessionId } })
       const conflict = await checkScheduleConflict(
-        current.campaignId.toString(),
         parsedDates,
-        parsedSlot.start,
-        parsedSlot.end,
         newTimeSlot,
         sessionId  // ← excludeId: loại trừ bản thân
       );

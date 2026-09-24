@@ -359,7 +359,7 @@ function DetailModal({ open, session, onClose, onRefresh }) {
             fontSize: 13,
           }}
         >
-          🚫 Lớp học đã đầy hoặc đã đóng, không thể thêm học viên mới.
+          🚫 Lớp học đã đầy, xóa học viên cũ để thêm học viên mới.
         </div>
       ) : (
         <Form
@@ -484,11 +484,6 @@ function DetailModal({ open, session, onClose, onRefresh }) {
           <TeamOutlined style={{ marginRight: 6, color: '#1677ff' }} />
           Danh sách lớp
         </Title>
-        <Badge
-          count={students.length}
-          showZero
-          style={{ backgroundColor: students.length > 0 ? '#1677ff' : '#d9d9d9' }}
-        />
       </Flex>
 
       <Table
@@ -725,25 +720,40 @@ export default function SessionPage() {
       dataIndex: 'classCode',
       key: 'classCode',
       width: 100,
-      render: (val) => <Text strong code>{val}</Text>,
+      sorter: (a, b) => a.classCode.localeCompare(b.classCode),
+      defaultSortOrder: 'ascend',
+      render: (val) => (
+        <Tag color="purple" style={{ fontWeight: 600, margin: 0 }}>
+          {val}
+        </Tag>
+      ),
     },
     {
       title: 'Khung giờ',
       dataIndex: 'timeSlot',
       key: 'timeSlot',
       width: 180,
-      render: (val) => <Tag color="geekblue">{val}</Tag>,
+      render: (val) => <Tag color="blue" style={{ fontWeight: 600, fontSize: 12 }}>{val}</Tag>,
     },
     {
       title: 'Ngày học',
       key: 'studyDates',
-      width: 190,
-      ellipsis: true,
+      width: 220,
       render: (_, record) => (
         <Tooltip
           title={record.studyDates?.map((d) => dayjs(d).format('DD/MM/YYYY')).join(' · ')}
         >
-          <Text style={{ fontSize: 12 }}>{formatDates(record.studyDates)}</Text>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {record.studyDates?.map((date, index) => (
+              <Tag
+                key={index}
+                color="blue"
+                style={{ fontWeight: 600, fontSize: 12, margin: 0 }} // margin: 0 để Antd không tự đẩy khoảng cách sai lệch
+              >
+                {dayjs(date).format('DD/MM')}
+              </Tag>
+            ))}
+          </div>
         </Tooltip>
       ),
     },
@@ -837,6 +847,10 @@ export default function SessionPage() {
 
       const monthTabs = sortedMonthKeys.map((mk) => {
         const { label, sessions: mSessions } = months[mk];
+        // Sắp xếp mặc định theo Mã lớp tăng dần (K01 → K02 → K03)
+        const sortedSessions = [...mSessions].sort(
+          (a, b) => a.classCode.localeCompare(b.classCode)
+        );
         return {
           key: mk,
           label: (
@@ -848,12 +862,12 @@ export default function SessionPage() {
           children: (
             <Table
               rowKey="_id"
-              dataSource={mSessions}
+              dataSource={sortedSessions}
               columns={sessionColumns}
               size="small"
               scroll={{ x: 750 }}
               pagination={
-                mSessions.length > 8
+                sortedSessions.length > 8
                   ? { pageSize: 8, showTotal: (t) => `${t} lớp`, showSizeChanger: false }
                   : false
               }
