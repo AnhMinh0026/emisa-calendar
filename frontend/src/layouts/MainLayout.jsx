@@ -6,6 +6,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   ScheduleOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -23,6 +24,11 @@ const menuItems = [
     key: '/sessions',
     icon: <CalendarOutlined />,
     label: 'Quản lý lớp học',
+  },
+  {
+    key: '/settings',
+    icon: <SettingOutlined />,
+    label: 'Cấu hình hệ thống',
   },
 ];
 

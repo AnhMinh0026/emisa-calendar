@@ -12,6 +12,7 @@ const cors          = require('cors');
 const connectDB      = require('./config/db');
 const sessionRoutes  = require('./routes/sessionRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
+const settingRoutes  = require('./routes/settingRoutes');
 
 // ─────────────────────────────────────────────
 // 2. Kết nối MongoDB Atlas
@@ -46,6 +47,7 @@ app.get('/', (req, res) => {
 // ── API Routes ──────────────────────────────────────────
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/sessions',  sessionRoutes);
+app.use('/api/settings',  settingRoutes);
 
 // TODO: Mount thêm khi phát triển các module khác
 // app.use('/api/admins', require('./routes/adminRoutes'));

@@ -3,7 +3,7 @@ import {
   Table, Button, Modal, Form, Input, InputNumber,
   Select, Space, Tag, Popconfirm, App, Typography,
   Tooltip, Flex, Tabs, Empty, Badge, DatePicker, Divider, Switch,
-  ConfigProvider,
+  List, Card,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -538,6 +538,10 @@ export default function SessionPage() {
   const [searchCode, setSearchCode] = useState('');
   const [filterStatus, setFilterStatus] = useState(null);
 
+  // ── State chọn Khóa học (thay Tabs cấp 1) ─────────────────────────────────
+  const [activeCampaignId, setActiveCampaignId] = useState(null);
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+
   // ── Fetch sessions (Single Source of Truth) ────────────────────────────────
   const fetchSessions = useCallback(async () => {
     setLoading(true);
@@ -596,6 +600,15 @@ export default function SessionPage() {
     [filteredSessions, campaigns]
   );
   const campaignIds = useMemo(() => Object.keys(groupedData), [groupedData]);
+
+  // Auto-select campaign đầu tiên khi data load hoặc filter thay đổi
+  useEffect(() => {
+    if (campaignIds.length === 0) { setActiveCampaignId(null); return; }
+    // Giữ nguyên nếu campaign đang chọn vẫn còn trong danh sách
+    if (activeCampaignId && campaignIds.includes(activeCampaignId)) return;
+    setActiveCampaignId(campaignIds[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignIds]);
 
   // ── Tháng của campaign trong Form ─────────────────────────────────────────
   const monthOptionsForForm = useMemo(() => {
@@ -833,77 +846,40 @@ export default function SessionPage() {
     },
   ];
 
-  // ── Build Tabs phân cấp Campaign → Tháng ──────────────────────────────────
-  const campaignTabs = useMemo(() => {
-    if (campaignIds.length === 0) return [];
-
-    return campaignIds.map((cId) => {
-      const { campaign, months, orderedMonths } = groupedData[cId];
-
-      const sortedMonthKeys = [
-        ...orderedMonths.filter((m) => months[m]),
-        ...Object.keys(months).filter((m) => !orderedMonths.includes(m)),
-      ];
-
-      const monthTabs = sortedMonthKeys.map((mk) => {
-        const { label, sessions: mSessions } = months[mk];
-        // Sắp xếp mặc định theo Mã lớp tăng dần (K01 → K02 → K03)
-        const sortedSessions = [...mSessions].sort(
-          (a, b) => a.classCode.localeCompare(b.classCode)
-        );
-        return {
-          key: mk,
-          label: (
-            <span>
-              {/* <CalendarOutlined style={{ marginRight: 5 }} /> */}
-              {label}
-            </span>
-          ),
-          children: (
-            <Table
-              rowKey="_id"
-              dataSource={sortedSessions}
-              columns={sessionColumns}
-              size="small"
-              scroll={{ x: 750 }}
-              pagination={
-                sortedSessions.length > 8
-                  ? { pageSize: 8, showTotal: (t) => `${t} lớp`, showSizeChanger: false }
-                  : false
-              }
-              locale={{ emptyText: 'Tháng này chưa có lớp học.' }}
-            />
-          ),
-        };
-      });
-
+  // ── Build Month Tabs cho campaign đang active ─────────────────────────────
+  const activeMonthTabs = useMemo(() => {
+    if (!activeCampaignId || !groupedData[activeCampaignId]) return [];
+    const { months, orderedMonths } = groupedData[activeCampaignId];
+    const sortedMonthKeys = [
+      ...orderedMonths.filter((m) => months[m]),
+      ...Object.keys(months).filter((m) => !orderedMonths.includes(m)),
+    ];
+    return sortedMonthKeys.map((mk) => {
+      const { label, sessions: mSessions } = months[mk];
+      const sortedSessions = [...mSessions].sort(
+        (a, b) => a.classCode.localeCompare(b.classCode)
+      );
       return {
-        key: cId,
-        label: (
-          <span>
-            {/* <TeamOutlined style={{ marginRight: 6 }} /> */}
-            {campaign.title}
-          </span>
-        ),
+        key: mk,
+        label: <span>{label}</span>,
         children: (
-          <div style={{ paddingTop: 4 }}>
-            {monthTabs.length === 0 ? (
-              <Empty description="Khóa học này chưa có lớp học nào." />
-            ) : (
-              <Tabs
-                type="card"
-                size="small"
-                items={monthTabs}
-                className="month-tabs"
-                style={{ marginTop: 4 }}
-              />
-            )}
-          </div>
+          <Table
+            rowKey="_id"
+            dataSource={sortedSessions}
+            columns={sessionColumns}
+            size="small"
+            scroll={{ x: 750 }}
+            pagination={
+              sortedSessions.length > 8
+                ? { pageSize: 8, showTotal: (t) => `${t} lớp`, showSizeChanger: false }
+                : false
+            }
+            locale={{ emptyText: 'Tháng này chưa có lớp học.' }}
+          />
         ),
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupedData, campaignIds]);
+  }, [groupedData, activeCampaignId, sessionColumns]);
 
   const hasActiveFilter = searchCode.trim() || filterStatus;
 
@@ -974,43 +950,142 @@ export default function SessionPage() {
         )}
       </Flex>
 
-      {/* ── Tabs phân cấp ────────────────────────────────────────────────── */}
+      {/* ── Header Khóa học ───────────────────────────────────────────────── */}
+      <Card
+        size="small"
+        style={{
+          marginBottom: 16,
+          borderRadius: 10,
+          border: '1px solid #e6e6e6',
+          background: 'linear-gradient(135deg, #f0f5ff 0%, #ffffff 100%)',
+          boxShadow: '0 1px 4px rgba(22,119,255,0.08)',
+        }}
+        styles={{ body: { padding: '12px 16px' } }}
+      >
+        <Flex justify="space-between" align="center" gap={12}>
+          <Flex align="center" gap={10} style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0 }}>
+              <Text type="secondary" style={{ fontSize: 11, display: 'block', lineHeight: 1.2 }}>Khóa học đang xem</Text>
+              <Title
+                level={4}
+                style={{
+                  marginTop: 5, color: '#1677ff', lineHeight: 1.3,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}
+              >
+                {activeCampaignId && groupedData[activeCampaignId]
+                  ? groupedData[activeCampaignId].campaign.title
+                  : '—'}
+              </Title>
+            </div>
+          </Flex>
+          <Button
+            type="primary"
+            ghost
+            icon={<FilterOutlined />}
+            onClick={() => setIsCourseModalOpen(true)}
+            id="btn-choose-course"
+            style={{ flexShrink: 0 }}
+          >
+            Chọn khóa học
+          </Button>
+        </Flex>
+      </Card>
+
+      {/* ── Khu vực Tab Tháng + Bảng ─────────────────────────────────────── */}
       {loading ? (
         <Table loading={loading} dataSource={[]} columns={sessionColumns} />
-      ) : campaignTabs.length === 0 ? (
+      ) : !activeCampaignId || activeMonthTabs.length === 0 ? (
         <Empty
           description={
             hasActiveFilter
               ? 'Không tìm thấy lớp học nào phù hợp với bộ lọc.'
-              : 'Chưa có lớp học nào. Hãy thêm mới!'
+              : 'Khóa học này chưa có lớp học nào. Hãy thêm mới!'
           }
           style={{ padding: '48px 0' }}
         />
       ) : (
-        <ConfigProvider
-          theme={{
-            components: {
-              Tabs: {
-                itemSelectedColor: '#1677ff', // Màu chữ xanh khi active (cả 2 cấp Tab)
-                itemHoverColor: '#69b1ff',    // Xanh nhạt khi hover
-                inkBarColor: '#1677ff',       // Thanh underline Tab cấp 1
-              },
-            },
+        <div
+          style={{
+            background: '#fff', borderRadius: 8,
+            border: '1px solid #f0f0f0', padding: '0 16px 16px',
           }}
         >
           <Tabs
-            type="line"
-            items={campaignTabs}
-            tabBarStyle={{ marginBottom: 0 }}
-            style={{
-              background: '#fff',
-              borderRadius: 8,
-              border: '1px solid #f0f0f0',
-              padding: '0 16px 16px',
-            }}
+            type="card"
+            size="small"
+            items={activeMonthTabs}
+            className="month-tabs"
+            style={{ marginTop: 4 }}
           />
-        </ConfigProvider>
+        </div>
       )}
+
+      {/* ── Modal chọn Khóa học ───────────────────────────────────────────── */}
+      <Modal
+        title="Chọn khóa học"
+        open={isCourseModalOpen}
+        onCancel={() => setIsCourseModalOpen(false)}
+        footer={null}
+        width={480}
+        destroyOnHidden
+      >
+        {campaigns.length === 0 ? (
+          <Empty description="Chưa có khóa học nào." style={{ padding: '24px 0' }} />
+        ) : (
+          <List
+            dataSource={campaigns}
+            rowKey="_id"
+            renderItem={(camp) => (
+              <List.Item
+                onClick={() => {
+                  setActiveCampaignId(camp._id);
+                  setIsCourseModalOpen(false);
+                }}
+                style={{
+                  cursor: 'pointer',
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  marginBottom: 4,
+                  background: activeCampaignId === camp._id ? '#e6f4ff' : 'transparent',
+                  border: activeCampaignId === camp._id ? '1px solid #91caff' : '1px solid transparent',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <List.Item.Meta
+                  avatar={
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%',
+                      background: activeCampaignId === camp._id ? '#1677ff' : '#f0f0f0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: activeCampaignId === camp._id ? '#fff' : '#888',
+                      fontWeight: 700, fontSize: 13, flexShrink: 0,
+                    }}>
+                      {camp.title?.charAt(0)?.toUpperCase() ?? 'K'}
+                    </div>
+                  }
+                  title={
+                    <Text strong style={{ color: activeCampaignId === camp._id ? '#1677ff' : undefined }}>
+                      {camp.title}
+                    </Text>
+                  }
+                  description={
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {camp.months?.length ? `${camp.months.length} tháng` : 'Chưa có tháng'}
+                      {groupedData[camp._id]
+                        ? ` · ${Object.values(groupedData[camp._id].months).reduce((s, m) => s + m.sessions.length, 0)} lớp`
+                        : ''}
+                    </Text>
+                  }
+                />
+                {activeCampaignId === camp._id && (
+                  <Tag color="blue" style={{ marginLeft: 8 }}>Đang xem</Tag>
+                )}
+              </List.Item>
+            )}
+          />
+        )}
+      </Modal>
 
       {/* ── Modal Thêm / Sửa ─────────────────────────────────────────────── */}
       <Modal
