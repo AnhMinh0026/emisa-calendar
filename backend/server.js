@@ -10,6 +10,7 @@ const express       = require('express');
 const cors          = require('cors');
 
 const connectDB      = require('./config/db');
+const authRoutes     = require('./routes/authRoutes');
 const sessionRoutes  = require('./routes/sessionRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
 const settingRoutes  = require('./routes/settingRoutes');
@@ -45,6 +46,7 @@ app.get('/', (req, res) => {
 });
 
 // ── API Routes ──────────────────────────────────────────
+app.use('/api/auth',      authRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/sessions',  sessionRoutes);
 app.use('/api/settings',  settingRoutes);

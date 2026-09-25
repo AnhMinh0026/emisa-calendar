@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layout, Menu, Typography, Avatar, theme } from 'antd';
+import { Layout, Menu, Typography, Avatar, theme, Button } from 'antd';
 import {
   BookOutlined,
   CalendarOutlined,
@@ -7,6 +7,8 @@ import {
   MenuUnfoldOutlined,
   ScheduleOutlined,
   SettingOutlined,
+  LogoutOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -16,17 +18,17 @@ const { Text } = Typography;
 // ─── Menu items ─────────────────────────────────────────────────────────────
 const menuItems = [
   {
-    key: '/campaigns',
+    key: '/admin/campaigns',
     icon: <BookOutlined />,
     label: 'Quản lý khóa học',
   },
   {
-    key: '/sessions',
+    key: '/admin/sessions',
     icon: <CalendarOutlined />,
     label: 'Quản lý lớp học',
   },
   {
-    key: '/settings',
+    key: '/admin/settings',
     icon: <SettingOutlined />,
     label: 'Cấu hình hệ thống',
   },
@@ -41,10 +43,15 @@ export default function MainLayout() {
 
   const handleMenuClick = ({ key }) => navigate(key);
 
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    navigate('/login', { replace: true });
+  };
+
   // Xác định menu item đang active dựa trên pathname hiện tại
   const selectedKey = menuItems.find((item) =>
     location.pathname.startsWith(item.key)
-  )?.key ?? '/campaigns';
+  )?.key ?? '/admin/campaigns';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -106,41 +113,63 @@ export default function MainLayout() {
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
             display: 'flex',
             alignItems: 'center',
-            gap: 16,
+            justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
             zIndex: 10,
           }}
         >
-          {/* Nút thu gọn / mở rộng Sidebar */}
-          <span
-            id="sidebar-toggle"
-            onClick={() => setCollapsed(!collapsed)}
-            style={{
-              fontSize: 18,
-              cursor: 'pointer',
-              color: token.colorTextSecondary,
-              padding: '4px 8px',
-              borderRadius: token.borderRadius,
-              transition: 'background 0.2s, color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = token.colorBgTextHover;
-              e.currentTarget.style.color = token.colorText;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = token.colorTextSecondary;
-            }}
-            title={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
-          >
-            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          </span>
+          {/* Cạnh trái: Nút thu gọn & Tiêu đề */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span
+              id="sidebar-toggle"
+              onClick={() => setCollapsed(!collapsed)}
+              style={{
+                fontSize: 18,
+                cursor: 'pointer',
+                color: token.colorTextSecondary,
+                padding: '4px 8px',
+                borderRadius: token.borderRadius,
+                transition: 'background 0.2s, color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = token.colorBgTextHover;
+                e.currentTarget.style.color = token.colorText;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = token.colorTextSecondary;
+              }}
+              title={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+            >
+              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </span>
 
-          {/* Breadcrumb / Page title — Outlet sẽ cung cấp sau */}
-          <Text type="secondary" style={{ fontSize: 14 }}>
-            {menuItems.find((m) => m.key === selectedKey)?.label ?? 'Dashboard'}
-          </Text>
+            <Text type="secondary" style={{ fontSize: 14 }}>
+              {menuItems.find((m) => m.key === selectedKey)?.label ?? 'Dashboard'}
+            </Text>
+          </div>
+
+          {/* Cạnh phải: Link trang Khách hàng & Nút Đăng xuất */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => window.open('/', '_blank')}
+              style={{ fontSize: 13, color: token.colorTextSecondary }}
+            >
+              Xem trang Lịch học
+            </Button>
+            <Button
+              type="text"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              style={{ fontSize: 13 }}
+            >
+              Đăng xuất
+            </Button>
+          </div>
         </Header>
 
         {/* Content */}

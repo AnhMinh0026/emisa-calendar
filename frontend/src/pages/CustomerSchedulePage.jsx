@@ -416,7 +416,7 @@ export default function CustomerSchedulePage() {
           fontWeight: 700, fontSize: 'clamp(28px, 5vw, 48px)',
           letterSpacing: -1.5, lineHeight: 1.1, fontFamily: 'inherit',
         }}>
-          Lịch học
+          Lịch Học
         </Title>
         <Text style={{ color: T.gray3, fontSize: 16, display: 'block', marginTop: 10 }}>
           Chọn khóa học và đăng ký lớp phù hợp với bạn

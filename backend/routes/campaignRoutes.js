@@ -9,17 +9,18 @@ const {
   updateCampaign,
   deleteCampaign,
 } = require('../controllers/campaignController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
-// GET    /api/campaigns      → Lấy danh sách tất cả khóa học
+// GET    /api/campaigns      → Lấy danh sách tất cả khóa học (Public)
 router.get('/', getAllCampaigns);
 
-// POST   /api/campaigns      → Tạo khóa học mới
-router.post('/', createCampaign);
+// POST   /api/campaigns      → Tạo khóa học mới (Protected)
+router.post('/', verifyToken, createCampaign);
 
-// PUT    /api/campaigns/:id  → Cập nhật khóa học
-router.put('/:id', updateCampaign);
+// PUT    /api/campaigns/:id  → Cập nhật khóa học (Protected)
+router.put('/:id', verifyToken, updateCampaign);
 
-// DELETE /api/campaigns/:id  → Xóa khóa học (bị chặn nếu còn lớp học liên kết)
-router.delete('/:id', deleteCampaign);
+// DELETE /api/campaigns/:id  → Xóa khóa học (Protected)
+router.delete('/:id', verifyToken, deleteCampaign);
 
 module.exports = router;
