@@ -47,6 +47,11 @@ const courseCampaignSchema = new mongoose.Schema(
       },
     },
 
+    isHidden: {
+      type: Boolean,
+      default: false,
+    },
+
     isArchived: {
       type: Boolean,
       default: false,
@@ -60,6 +65,7 @@ const courseCampaignSchema = new mongoose.Schema(
 
 // Index để tăng tốc query và sort
 courseCampaignSchema.index({ months: 1 });
+courseCampaignSchema.index({ isHidden: 1 });
 
 const CourseCampaign = mongoose.model('CourseCampaign', courseCampaignSchema);
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Table, Button, Modal, Form, Input,
   Space, Tag, Popconfirm, App, Typography, Tooltip,
-  Flex, Select,
+  Flex, Select, Switch,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -43,6 +43,7 @@ export default function CampaignPage() {
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
   // ── State Filter ───────────────────────────────────────────────────────────
   const [searchText, setSearchText] = useState('');
@@ -153,6 +154,26 @@ export default function CampaignPage() {
     }
   };
 
+  const handleToggleHidden = async (record) => {
+    const newHidden = !record.isHidden;
+    setTogglingId(record._id);
+    try {
+      await api.put(`/campaigns/${record._id}`, { isHidden: newHidden });
+      message.success(
+        newHidden
+          ? `Đã ẩn khóa học "${record.title}".`
+          : `Đã hiển thị khóa học "${record.title}".`
+      );
+      setCampaigns((prev) =>
+        prev.map((c) => (c._id === record._id ? { ...c, isHidden: newHidden } : c))
+      );
+    } catch (err) {
+      message.error(err.message || 'Không thể cập nhật trạng thái hiển thị.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   // ── Cột bảng ──────────────────────────────────────────────────────────────
   const columns = [
     {
@@ -185,6 +206,27 @@ export default function CampaignPage() {
         ) : (
           <Text type="secondary">—</Text>
         ),
+    },
+    {
+      title: 'Hiển thị',
+      dataIndex: 'isHidden',
+      key: 'isHidden',
+      width: 110,
+      align: 'center',
+      render: (_, record) => (
+        <Tooltip title={!record.isHidden ? 'Đang hiển thị cho học viên (Click để ẩn)' : 'Đang ẩn khỏi học viên (Click để hiện)'}>
+          <Switch
+            checked={!record.isHidden}
+            loading={togglingId === record._id}
+            onChange={() => handleToggleHidden(record)}
+            checkedChildren="Hiện"
+            unCheckedChildren="Ẩn"
+            style={{
+              backgroundColor: !record.isHidden ? '#34C759' : undefined,
+            }}
+          />
+        </Tooltip>
+      ),
     },
     {
       title: 'Ngày tạo',
@@ -296,7 +338,7 @@ export default function CampaignPage() {
           showTotal: (total) => `${total} / ${campaigns.length} khóa học`,
           showSizeChanger: false,
         }}
-        scroll={{ x: 750 }}
+        scroll={{ x: 850 }}
         size="middle"
         locale={{
           emptyText: hasActiveFilter

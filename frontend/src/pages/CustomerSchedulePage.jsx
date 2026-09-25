@@ -306,7 +306,7 @@ export default function CustomerSchedulePage() {
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/sessions');
+      const { data } = await api.get('/sessions?isPublic=true');
       setSessions(data.data ?? []);
     } catch {
       // silent

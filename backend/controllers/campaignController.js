@@ -56,7 +56,7 @@ const parseAndValidateMonths = (rawMonths) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const createCampaign = async (req, res) => {
   try {
-    const { title, description, months } = req.body;
+    const { title, description, months, isHidden } = req.body;
 
     if (!title || !months) {
       return res.status(400).json({
@@ -74,6 +74,7 @@ const createCampaign = async (req, res) => {
       title,
       description,
       months: validated.months,
+      isHidden: isHidden !== undefined ? Boolean(isHidden) : false,
     });
 
     return res.status(201).json({
@@ -91,7 +92,13 @@ const createCampaign = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const getAllCampaigns = async (req, res) => {
   try {
-    const campaigns = await CourseCampaign.find({ isArchived: false })
+    const { isPublic } = req.query;
+    const filter = { isArchived: false };
+    if (isPublic === 'true') {
+      filter.isHidden = { $ne: true };
+    }
+
+    const campaigns = await CourseCampaign.find(filter)
       .sort({ createdAt: -1 })
       .lean();
 
@@ -116,11 +123,12 @@ const updateCampaign = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ID khóa học không hợp lệ.' });
     }
 
-    const { title, description, months } = req.body;
+    const { title, description, months, isHidden } = req.body;
     const updateFields = {};
 
     if (title       !== undefined) updateFields.title       = title;
     if (description !== undefined) updateFields.description = description;
+    if (isHidden    !== undefined) updateFields.isHidden    = Boolean(isHidden);
 
     if (months !== undefined) {
       const validated = parseAndValidateMonths(months);
@@ -154,7 +162,7 @@ const updateCampaign = async (req, res) => {
     if (Object.keys(updateFields).length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Không có trường nào được cập nhật. Cung cấp ít nhất: title, description, hoặc months.',
+        message: 'Không có trường nào được cập nhật. Cung cấp ít nhất: title, description, months, hoặc isHidden.',
       });
     }
 

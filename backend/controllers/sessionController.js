@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const mongoose = require('mongoose');
 const ClassSession = require('../models/ClassSession');
@@ -189,11 +189,29 @@ const checkScheduleConflict = async (parsedDates, timeSlot, excludeId = null) =>
 // ─────────────────────────────────────────────────────────────────────────────
 const getAllSessions = async (req, res) => {
   try {
-    const { campaignId } = req.query;
-    const filter = campaignId ? { campaignId } : {};
+    const { campaignId, isPublic } = req.query;
+    let filter = {};
+
+    if (isPublic === 'true') {
+      const activeCampaigns = await CourseCampaign.find({ isHidden: { $ne: true } }).select('_id');
+      const activeCampaignIds = activeCampaigns.map((c) => c._id);
+
+      if (campaignId) {
+        filter = {
+          $and: [
+            { campaignId },
+            { campaignId: { $in: activeCampaignIds } },
+          ],
+        };
+      } else {
+        filter = { campaignId: { $in: activeCampaignIds } };
+      }
+    } else if (campaignId) {
+      filter = { campaignId };
+    }
 
     const sessions = await ClassSession.find(filter)
-      .populate('campaignId', 'title months description') // Populate Campaign (months thay month)
+      .populate('campaignId', 'title months description isHidden') // Populate Campaign (months thay month)
       .sort({ createdAt: -1 })
       .lean();
 
