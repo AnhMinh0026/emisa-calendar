@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  Row, Col, Typography, Flex, Spin, Empty, Modal, Button, ConfigProvider,
+  Row, Col, Card, Typography, Flex, Spin, Empty, Modal, Button, ConfigProvider, Grid,
 } from 'antd';
 import {
   FacebookFilled, MessageOutlined,
@@ -23,9 +23,9 @@ const T = {
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CFG = {
-  open:   { dot: T.green, label: 'Còn chỗ',    textColor: T.green },
-  full:   { dot: T.gray4, label: 'Đã hết chỗ', textColor: T.gray3 },
-  closed: { dot: T.gray4, label: 'Đã đóng',    textColor: T.gray3 },
+  open: { dot: T.green, label: 'Còn chỗ', textColor: T.green },
+  full: { dot: T.gray4, label: 'Đã đầy', textColor: T.gray3 },
+  closed: { dot: T.gray4, label: 'Đã đóng', textColor: T.gray3 },
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -67,107 +67,150 @@ function Pill({ label, active, onClick, id }) {
 
 // ── SessionCard ───────────────────────────────────────────────────────────────
 function SessionCard({ session, onRegister }) {
-  const [hovered, setHovered] = useState(false);
+  const screens = Grid.useBreakpoint();
   const isFull = session.status !== 'open';
   const cfg = STATUS_CFG[session.status] ?? STATUS_CFG.closed;
   const sortedDates = [...(session.studyDates ?? [])].sort((a, b) => new Date(a) - new Date(b));
 
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <Card
+      className="session-card"
+      hoverable
+      onClick={() => !isFull && onRegister?.(session)}
+      styles={{
+        body: {
+          padding: '10px 8px 12px',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+        },
+      }}
       style={{
-        height: '100%', borderRadius: 16,
-        background: T.white, border: `1px solid ${T.gray2}`,
-        overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        boxShadow: hovered ? '0 8px 24px rgba(0,0,0,0.09)' : '0 2px 8px rgba(0,0,0,0.04)',
-        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
-        transition: 'box-shadow 0.28s ease, transform 0.28s ease',
+        height: '100%',
+        borderRadius: 12,
+        background: T.white,
+        border: `1px solid ${T.gray2}`,
+        overflow: 'hidden',
+        cursor: isFull ? 'default' : 'pointer',
       }}
     >
-      {/* Header */}
-      <div style={{ padding: '16px 18px 12px', borderBottom: `1px solid ${T.gray1}` }}>
-        <Flex justify="space-between" align="center">
-          <span style={{
-            background: T.gray1, color: T.black,
-            fontWeight: 700, fontSize: 13, letterSpacing: 0.6,
-            padding: '3px 10px', borderRadius: 8,
-          }}>
-            {session.classCode}
-          </span>
-          <Flex align="center" gap={5}>
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: cfg.dot, display: 'inline-block',
-              boxShadow: isFull ? 'none' : `0 0 0 2px ${T.green}22`,
-            }} />
-            <Text style={{ fontSize: 12, color: cfg.textColor, fontWeight: 600 }}>
-              {cfg.label}
-            </Text>
-          </Flex>
-        </Flex>
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: '18px 18px 12px', flex: 1 }}>
-        <div style={{ fontSize: 26, fontWeight: 700, color: T.black, letterSpacing: -0.5, marginBottom: 14, lineHeight: 1.2 }}>
-          {session.timeSlot}
-        </div>
-        <Flex align="center" gap={4} style={{ marginBottom: 14 }}>
-          <Text style={{ fontSize: 13, color: T.gray3 }}>Sĩ số</Text>
-          <Text style={{ fontSize: 13, color: T.gray3 }}>·</Text>
-          <Text style={{ fontSize: 13, color: T.black, fontWeight: 600 }}>
-            {session.currentBooked} / {session.maxCapacity}
-          </Text>
-          {!isFull && (
-            <Text style={{ fontSize: 12, color: T.gray3 }}>(còn {session.maxCapacity - session.currentBooked} chỗ)</Text>
-          )}
-        </Flex>
-        <div style={{ marginBottom: 4 }}>
-          <Text style={{ fontSize: 11, fontWeight: 700, color: T.gray3, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            Ngày học
-          </Text>
-        </div>
-        <Flex wrap="wrap" gap={4} style={{ marginTop: 6 }}>
-          {sortedDates.map((d, i) => (
-            <span key={i} style={{
-              background: T.gray1, color: T.black,
-              fontSize: 11, fontWeight: 600,
-              padding: '3px 8px', borderRadius: 6,
-            }}>
-              {dayjs(d).format('DD/MM')}
-            </span>
-          ))}
-        </Flex>
-      </div>
-
-      {/* Footer CTA */}
-      <div style={{ padding: '12px 18px 16px', borderTop: `1px solid ${T.gray1}` }}>
-        <button
-          disabled={isFull}
-          onClick={() => !isFull && onRegister(session)}
+      {/* Header: Mã lớp & Trạng thái */}
+      <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+        <span
+          className="session-tag-code"
           style={{
-            width: '100%', height: 44,
-            background: isFull ? T.gray1 : T.black,
-            color: isFull ? T.gray3 : T.white,
-            border: 'none', borderRadius: 12,
-            fontSize: 15, fontWeight: 600,
-            cursor: isFull ? 'not-allowed' : 'pointer',
-            fontFamily: 'inherit', transition: 'opacity 0.15s',
+            backgroundColor: '#F3E8FF',
+            color: '#7E22CE',
+            border: 'none',
+            fontWeight: 600,
+            fontSize: screens.md ? 12 : 11,
+            letterSpacing: 0.4,
+            padding: '2px 8px',
+            borderRadius: '6px',
+            display: 'inline-block',
+            lineHeight: '18px',
           }}
-          onMouseEnter={(e) => { if (!isFull) e.currentTarget.style.opacity = '0.82'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
         >
-          {isFull ? 'Đã hết chỗ' : 'Đăng ký ngay'}
-        </button>
+          {session.classCode}
+        </span>
+        <Flex align="center" gap={4}>
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: cfg.dot,
+              display: 'inline-block',
+              flexShrink: 0,
+              animation: !isFull ? 'statusPulse 2s infinite ease-in-out' : 'none',
+            }}
+          />
+          <span
+            className="session-status-text"
+            style={{ fontSize: 10, color: cfg.textColor, fontWeight: 600, whiteSpace: 'nowrap' }}
+          >
+            {cfg.label}
+          </span>
+        </Flex>
+      </Flex>
+
+      {/* Giờ học */}
+      <div
+        className="session-time-slot"
+        style={{
+          fontSize: screens.md ? 16 : 15,
+          fontWeight: 700,
+          color: T.black,
+          letterSpacing: -0.3,
+          marginBottom: 8,
+          lineHeight: 1.2,
+        }}
+      >
+        {session.timeSlot}
       </div>
-    </div>
+
+      {/* Sĩ số */}
+      <div
+        className="session-capacity"
+        style={{
+          fontSize: screens.md ? 14 : 13,
+          color: '#8E8E93',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          marginBottom: 8,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span>Sĩ số:</span>
+        <span style={{ color: T.black, fontWeight: 600 }}>
+          {session.currentBooked}/{session.maxCapacity}
+        </span>
+        {!isFull && (
+          <span style={{ color: '#8E8E93', fontSize: screens.md ? 13 : 12 }}>
+            (còn {session.maxCapacity - session.currentBooked})
+          </span>
+        )}
+      </div>
+
+      {/* Ngày học: Render thẳng các Tag ngày học, không có chữ NGÀY HỌC */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          margin: '-2px',
+          flex: 1,
+          alignContent: 'flex-start',
+        }}
+      >
+        {sortedDates.map((d, i) => (
+          <span
+            key={i}
+            className="session-date-tag"
+            style={{
+              background: T.gray1,
+              color: T.black,
+              fontSize: screens.md ? '12px' : '10px',
+              fontWeight: 600,
+              padding: screens.md ? '2px 8px' : '0 4px',
+              margin: 2,
+              lineHeight: screens.md ? '20px' : '16px',
+              borderRadius: screens.md ? 6 : 4,
+              display: 'inline-block',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {dayjs(d).format('DD/MM')}
+          </span>
+        ))}
+      </div>
+    </Card>
   );
 }
 
 // ── ContactModal (thay thế RegisterModal) ────────────────────────────────────
 function ContactModal({ open, session, contactLinks, onClose }) {
-  const hasFB   = !!contactLinks?.facebook?.trim();
+  const hasFB = !!contactLinks?.facebook?.trim();
   const hasZalo = !!contactLinks?.zalo?.trim();
   const sortedDates = [...(session?.studyDates ?? [])].sort((a, b) => new Date(a) - new Date(b));
 
@@ -295,12 +338,12 @@ function ContactModal({ open, session, contactLinks, onClose }) {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function CustomerSchedulePage() {
-  const [sessions, setSessions]           = useState([]);
-  const [loading, setLoading]             = useState(true);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeCampaignId, setActiveCampaignId] = useState(null);
-  const [activeMonth, setActiveMonth]     = useState(null);
+  const [activeMonth, setActiveMonth] = useState(null);
   const [registerSession, setRegisterSession] = useState(null);
-  const [contactLinks, setContactLinks]   = useState(null);
+  const [contactLinks, setContactLinks] = useState(null);
 
   // ── Fetch sessions ─────────────────────────────────────────────────────────
   const fetchSessions = useCallback(async () => {
@@ -380,7 +423,7 @@ export default function CustomerSchedulePage() {
         </Text>
       </div>
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 20px 64px' }}>
+      <div style={{ maxWidth: 1380, margin: '0 auto', padding: '0 20px 64px' }}>
 
         {/* Sticky Filter Bar */}
         <div style={{
@@ -450,9 +493,9 @@ export default function CustomerSchedulePage() {
             <Text style={{ color: T.gray3, fontSize: 15 }}>Tháng này chưa có lớp học nào.</Text>
           </div>
         ) : (
-          <Row gutter={[16, 16]}>
+          <Row gutter={[{ xs: 8, sm: 16 }, { xs: 12, sm: 16 }]}>
             {displaySessions.map((session) => (
-              <Col key={session._id} xs={24} sm={12} lg={8}>
+              <Col key={session._id} lg={6} md={8} sm={12} xs={12}>
                 <SessionCard session={session} onRegister={setRegisterSession} />
               </Col>
             ))}
@@ -468,8 +511,17 @@ export default function CustomerSchedulePage() {
         onClose={() => setRegisterSession(null)}
       />
 
-      {/* Hide scrollbar */}
-      <style>{`*::-webkit-scrollbar { display: none !important; } * { -webkit-font-smoothing: antialiased; }`}</style>
+      {/* Hide scrollbar & Animations */}
+      <style>{`
+        *::-webkit-scrollbar { display: none !important; }
+        * { -webkit-font-smoothing: antialiased; }
+
+        @keyframes statusPulse {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); opacity: 1; }
+          70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(52, 199, 89, 0); opacity: 0.8; }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
