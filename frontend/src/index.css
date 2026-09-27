@@ -76,12 +76,15 @@ html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system,
 }
 
 /* ── Mobile Session & Campaign Cards ── */
+/* ── Mobile Session, Campaign & Student Cards ── */
 .mobile-session-card,
-.mobile-campaign-card {
+.mobile-campaign-card,
+.mobile-student-card {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .mobile-session-card:active,
-.mobile-campaign-card:active {
+.mobile-campaign-card:active,
+.mobile-student-card:active {
   transform: scale(0.99);
 }
 

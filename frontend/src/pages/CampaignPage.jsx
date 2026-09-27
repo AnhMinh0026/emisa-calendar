@@ -245,7 +245,7 @@ export default function CampaignPage() {
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
-          <Tooltip title="Chỉnh sửa">
+          <Tooltip title={screens.md ? "Chỉnh sửa" : null}>
             <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           </Tooltip>
           <Popconfirm
@@ -257,7 +257,7 @@ export default function CampaignPage() {
             cancelText="Hủy"
             placement="topRight"
           >
-            <Tooltip title="Xóa">
+            <Tooltip title={screens.md ? "Xóa" : null}>
               <Button type="text" danger icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
@@ -287,7 +287,7 @@ export default function CampaignPage() {
             width: !screens.md ? '100%' : 'auto',
           }}
         >
-          <Tooltip title="Tải lại">
+          <Tooltip title={screens.md ? "Tải lại" : null}>
             <Button icon={<ReloadOutlined />} onClick={fetchCampaigns} loading={loading} />
           </Tooltip>
           <Button
@@ -432,9 +432,11 @@ export default function CampaignPage() {
                 >
                   <Tooltip
                     title={
-                      !record.isHidden
-                        ? 'Đang hiển thị (Click để ẩn)'
-                        : 'Đang ẩn (Click để hiện)'
+                      screens.md
+                        ? (!record.isHidden
+                            ? 'Đang hiển thị (Click để ẩn)'
+                            : 'Đang ẩn (Click để hiện)')
+                        : null
                     }
                   >
                     <Switch
@@ -449,7 +451,7 @@ export default function CampaignPage() {
                       }}
                     />
                   </Tooltip>
-                  <Tooltip title="Chỉnh sửa">
+                  <Tooltip title={screens.md ? "Chỉnh sửa" : null}>
                     <Button
                       type="text"
                       size="small"
@@ -467,7 +469,7 @@ export default function CampaignPage() {
                     cancelText="Hủy"
                     placement="topRight"
                   >
-                    <Tooltip title="Xóa">
+                    <Tooltip title={screens.md ? "Xóa" : null}>
                       <Button
                         type="text"
                         danger
@@ -524,6 +526,11 @@ export default function CampaignPage() {
         confirmLoading={submitting}
         destroyOnHidden
         width={620}
+        style={{ top: !screens.md ? 10 : undefined, marginBottom: !screens.md ? 32 : undefined }}
+        styles={{
+          body: { paddingBottom: !screens.md ? 'max(24px, env(safe-area-inset-bottom))' : undefined },
+          footer: { paddingBottom: !screens.md ? 'max(24px, env(safe-area-inset-bottom))' : undefined },
+        }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }} requiredMark="optional">
 

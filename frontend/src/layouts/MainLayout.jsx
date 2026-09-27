@@ -9,6 +9,7 @@ import {
   SettingOutlined,
   LogoutOutlined,
   EyeOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -26,6 +27,11 @@ const menuItems = [
     key: '/admin/sessions',
     icon: <CalendarOutlined />,
     label: 'Quản lý lớp học',
+  },
+  {
+    key: '/admin/students',
+    icon: <TeamOutlined />,
+    label: 'Quản lý học viên',
   },
   {
     key: '/admin/settings',

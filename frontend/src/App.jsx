@@ -8,6 +8,7 @@ import CampaignPage from './pages/CampaignPage';
 import SessionPage from './pages/SessionPage';
 import CustomerSchedulePage from './pages/CustomerSchedulePage';
 import SettingsPage from './pages/SettingsPage';
+import StudentPage from './pages/StudentPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -39,6 +40,7 @@ export default function App() {
             <Route index element={<Navigate to="/admin/campaigns" replace />} />
             <Route path="campaigns" element={<CampaignPage />} />
             <Route path="sessions" element={<SessionPage />} />
+            <Route path="students" element={<StudentPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

@@ -14,6 +14,7 @@ const authRoutes     = require('./routes/authRoutes');
 const sessionRoutes  = require('./routes/sessionRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
 const settingRoutes  = require('./routes/settingRoutes');
+const studentRoutes  = require('./routes/studentRoutes');
 
 // ─────────────────────────────────────────────
 // 2. Kết nối MongoDB Atlas
@@ -50,6 +51,7 @@ app.use('/api/auth',      authRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/sessions',  sessionRoutes);
 app.use('/api/settings',  settingRoutes);
+app.use('/api/students',  studentRoutes);
 
 // TODO: Mount thêm khi phát triển các module khác
 // app.use('/api/admins', require('./routes/adminRoutes'));

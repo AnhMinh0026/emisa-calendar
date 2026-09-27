@@ -309,7 +309,8 @@ function DetailModal({ open, session, onClose, onRefresh }) {
       footer={null}
       destroyOnHidden
       width={1400}
-      style={{ maxWidth: '95vw', top: 20 }}
+      style={{ maxWidth: '95vw', top: !screens.md ? 10 : 20, marginBottom: !screens.md ? 32 : undefined }}
+      styles={{ body: { paddingBottom: !screens.md ? 'max(32px, env(safe-area-inset-bottom))' : undefined } }}
     >
       {/* ── Thông tin tóm tắt ──────────────────────────────────────────── */}
       <Flex
@@ -556,17 +557,22 @@ function DetailModal({ open, session, onClose, onRefresh }) {
                 </div>
               </div>
 
-              {/* Khối bên phải (Trạng thái & Thao tác) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {student.isFullyPaid ? (
-                  <Tag color="success" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
-                    Đã đóng
+              {/* Khối bên phải (Trạng thái Tiền & Thao tác) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <Tag color="blue" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
+                    Cọc: {fmtMoney(student.depositAmount ?? 0)}
                   </Tag>
-                ) : (
-                  <Tag color="error" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
-                    {student.remainingAmount > 0 ? `Nợ ${fmtMoney(student.remainingAmount)}` : 'Còn nợ'}
-                  </Tag>
-                )}
+                  {student.isFullyPaid ? (
+                    <Tag color="success" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
+                      ✓ Xong
+                    </Tag>
+                  ) : (
+                    <Tag color="error" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
+                      Nợ: {fmtMoney(student.remainingAmount ?? 0)}
+                    </Tag>
+                  )}
+                </div>
                 <Popconfirm
                   title="Xóa học viên"
                   description="Chắc chắn xóa học viên này?"
@@ -577,7 +583,7 @@ function DetailModal({ open, session, onClose, onRefresh }) {
                   placement="topRight"
                   disabled={removingId === student._id}
                 >
-                  <Tooltip title="Xóa học viên">
+                  <Tooltip title={screens.md ? "Xóa học viên" : null}>
                     <Button
                       type="text"
                       danger
@@ -893,7 +899,7 @@ export default function SessionPage() {
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
-          <Tooltip title="Chi tiết học viên">
+          <Tooltip title={screens.md ? "Chi tiết học viên" : null}>
             <Button
               type="text"
               icon={<EyeOutlined />}
@@ -902,7 +908,7 @@ export default function SessionPage() {
               id={`btn-detail-${record._id}`}
             />
           </Tooltip>
-          <Tooltip title="Chỉnh sửa">
+          <Tooltip title={screens.md ? "Chỉnh sửa" : null}>
             <Button
               type="text"
               icon={<EditOutlined />}
@@ -919,7 +925,7 @@ export default function SessionPage() {
             cancelText="Hủy"
             placement="topLeft"
           >
-            <Tooltip title="Xóa">
+            <Tooltip title={screens.md ? "Xóa" : null}>
               <Button
                 type="text"
                 danger
@@ -1253,7 +1259,7 @@ export default function SessionPage() {
                       {session.classCode}
                     </Tag>
                     <Space size={2}>
-                      <Tooltip title="Chi tiết học viên">
+                      <Tooltip title={screens.md ? "Chi tiết học viên" : null}>
                         <Button
                           type="text"
                           size="small"
@@ -1263,7 +1269,7 @@ export default function SessionPage() {
                           id={`btn-detail-${session._id}`}
                         />
                       </Tooltip>
-                      <Tooltip title="Chỉnh sửa">
+                      <Tooltip title={screens.md ? "Chỉnh sửa" : null}>
                         <Button
                           type="text"
                           size="small"
@@ -1281,7 +1287,7 @@ export default function SessionPage() {
                         cancelText="Hủy"
                         placement="bottomRight"
                       >
-                        <Tooltip title="Xóa">
+                        <Tooltip title={screens.md ? "Xóa" : null}>
                           <Button
                             type="text"
                             size="small"
@@ -1331,8 +1337,8 @@ export default function SessionPage() {
                       {session.status === 'open'
                         ? 'Còn chỗ'
                         : session.status === 'full'
-                        ? 'Đã đầy'
-                        : STATUS_CONFIG[session.status]?.label || session.status}
+                          ? 'Đã đầy'
+                          : STATUS_CONFIG[session.status]?.label || session.status}
                     </Tag>
                   </Flex>
                 </Card>
@@ -1423,6 +1429,11 @@ export default function SessionPage() {
         confirmLoading={submitting}
         destroyOnHidden
         width={540}
+        style={{ top: !screens.md ? 10 : undefined, marginBottom: !screens.md ? 32 : undefined }}
+        styles={{
+          body: { paddingBottom: !screens.md ? 'max(28px, env(safe-area-inset-bottom))' : undefined },
+          footer: { paddingBottom: !screens.md ? 'max(24px, env(safe-area-inset-bottom))' : undefined },
+        }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }} requiredMark="optional">
 
