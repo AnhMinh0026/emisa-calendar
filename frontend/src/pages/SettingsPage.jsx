@@ -74,7 +74,7 @@ export default function SettingsPage() {
       >
         <Paragraph type="secondary" style={{ marginBottom: 20, fontSize: 13 }}>
           Các link này sẽ hiển thị trong trang lịch học công khai (
-          <Text code>/schedule</Text>) khi khách hàng click{' '}
+          <Text code>/</Text>) khi khách hàng click{' '}
           <strong>"Đăng ký ngay"</strong>. Để trống nếu chưa muốn hiển thị.
         </Paragraph>
 

@@ -10,3 +10,93 @@ html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system,
   color: #1677ff !important;
   font-weight: 600;
 }
+
+/* ── Month Tabs Container & Mobile Horizontal Scroll ── */
+.month-tabs-scroll-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  /* Hiệu ứng bóng mờ nhẹ (fade gradient) ở mép phải khung chứa Tabs */
+  .month-tabs-scroll-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 0;
+    width: 32px;
+    height: 38px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95));
+    pointer-events: none;
+    z-index: 3;
+    border-top-right-radius: 6px;
+  }
+
+  /* Dải Tabs cuộn ngang mượt mà, ẩn scrollbar, để padding-right cho tab cuối lấp ló */
+  .month-tabs .ant-tabs-nav {
+    margin-bottom: 12px !important;
+  }
+
+  .month-tabs .ant-tabs-nav-wrap {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE/Edge */
+    padding-right: 28px !important; /* Tháng cuối lấp ló ra một nửa báo hiệu có thể vuốt */
+  }
+
+  .month-tabs .ant-tabs-nav-wrap::-webkit-scrollbar {
+    display: none !important; /* Chrome / Safari */
+  }
+
+  .month-tabs .ant-tabs-nav-list {
+    display: flex !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Ẩn các nút điều hướng mũi tên mặc định của Antd trên Mobile */
+  .month-tabs .ant-tabs-nav-operations {
+    display: none !important;
+  }
+}
+
+/* ── Mobile Responsive Table Padding ── */
+@media (max-width: 768px) {
+  .ant-table .ant-table-thead > tr > th,
+  .ant-table .ant-table-tbody > tr > td {
+    padding: 8px 8px !important;
+    font-size: 13px !important;
+  }
+  .ant-table-pagination {
+    margin: 12px 0 !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+}
+
+/* ── Mobile Session & Campaign Cards ── */
+.mobile-session-card,
+.mobile-campaign-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mobile-session-card:active,
+.mobile-campaign-card:active {
+  transform: scale(0.99);
+}
+
+/* ── Mobile Month Pills Bar ── */
+.mobile-month-pills-bar {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+  -webkit-overflow-scrolling: touch;
+}
+.mobile-month-pills-bar::-webkit-scrollbar {
+  display: none !important; /* Chrome / Safari */
+}
+.mobile-month-pill {
+  transition: all 0.25s ease !important;
+}
+.mobile-month-pill:active {
+  transform: scale(0.95);
+}

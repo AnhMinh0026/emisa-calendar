@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Table, Button, Modal, Form, Input,
   Space, Tag, Popconfirm, App, Typography, Tooltip,
-  Flex, Select, Switch,
+  Flex, Select, Switch, Row, Col, Grid, Card, Empty,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -36,6 +36,7 @@ const MONTH_OPTIONS = generateMonthOptions();
 export default function CampaignPage() {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
+  const screens = Grid.useBreakpoint();
 
   // ── State dữ liệu ──────────────────────────────────────────────────────────
   const [campaigns, setCampaigns] = useState([]);
@@ -269,9 +270,11 @@ export default function CampaignPage() {
   return (
     <>
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Quản lý Khóa học</Title>
-        <Space>
+      <Flex justify="space-between" align="center" gap={12} style={{ marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0, fontSize: !screens.md ? 18 : 20, whiteSpace: 'nowrap' }}>
+          Quản lý Khóa học
+        </Title>
+        <Flex align="center" gap={8} style={{ flexShrink: 0 }}>
           <Tooltip title="Tải lại">
             <Button icon={<ReloadOutlined />} onClick={fetchCampaigns} loading={loading} />
           </Tooltip>
@@ -283,69 +286,215 @@ export default function CampaignPage() {
           >
             Thêm Khóa học
           </Button>
-        </Space>
+        </Flex>
       </Flex>
 
       {/* ── Toolbar: Search + Filter tháng ──────────────────────────────── */}
-      <Flex
-        gap={12} align="center" wrap="wrap"
+      <Row
+        gutter={[12, 12]}
+        align="middle"
         style={{
-          marginBottom: 16, padding: '12px 16px',
-          background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0',
+          marginBottom: 16,
+          padding: '12px 14px',
+          background: '#fafafa',
+          borderRadius: 8,
+          border: '1px solid #f0f0f0',
         }}
       >
-        <FilterOutlined style={{ color: '#888', fontSize: 15 }} />
+        <Col xs={24} sm={12} md={8}>
+          <Input.Search
+            placeholder="Tìm theo tên khóa học..."
+            allowClear
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            prefix={<SearchOutlined />}
+            style={{ width: '100%' }}
+            id="search-campaign"
+          />
+        </Col>
 
-        <Input.Search
-          placeholder="Tìm theo tên khóa học..."
-          allowClear
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          prefix={<SearchOutlined />}
-          style={{ width: 260 }}
-          id="search-campaign"
-        />
-
-        <Select
-          placeholder="Lọc theo tháng"
-          allowClear
-          showSearch
-          value={filterMonth}
-          onChange={(val) => setFilterMonth(val ?? null)}
-          options={MONTH_OPTIONS}
-          style={{ width: 180 }}
-          id="filter-campaign-month"
-        />
+        <Col xs={24} sm={12} md={6}>
+          <Select
+            placeholder="Lọc theo tháng"
+            allowClear
+            showSearch
+            value={filterMonth}
+            onChange={(val) => setFilterMonth(val ?? null)}
+            options={MONTH_OPTIONS}
+            style={{ width: '100%' }}
+            id="filter-campaign-month"
+          />
+        </Col>
 
         {hasActiveFilter && (
-          <Flex align="center" gap={8}>
-            <Text type="secondary" style={{ fontSize: 13 }}>
-              Tìm thấy <Text strong>{filteredCampaigns.length}</Text> / {campaigns.length} kết quả
-            </Text>
-            <Button size="small" onClick={resetFilters}>Xóa bộ lọc</Button>
-          </Flex>
+          <Col xs={24} md={10}>
+            <Flex align="center" justify="space-between" gap={8} wrap="wrap">
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Tìm thấy <Text strong>{filteredCampaigns.length}</Text> / {campaigns.length} kết quả
+              </Text>
+              <Button size="small" onClick={resetFilters}>Xóa bộ lọc</Button>
+            </Flex>
+          </Col>
         )}
-      </Flex>
+      </Row>
 
-      {/* ── Bảng ────────────────────────────────────────────────────────── */}
-      <Table
-        rowKey="_id"
-        dataSource={filteredCampaigns}
-        columns={columns}
-        loading={loading}
-        pagination={{
-          pageSize: 10,
-          showTotal: (total) => `${total} / ${campaigns.length} khóa học`,
-          showSizeChanger: false,
-        }}
-        scroll={{ x: 850 }}
-        size="middle"
-        locale={{
-          emptyText: hasActiveFilter
-            ? 'Không tìm thấy kết quả phù hợp.'
-            : 'Chưa có khóa học nào. Hãy thêm mới!',
-        }}
-      />
+      {/* ── Danh sách Khóa học: Table (Desktop) / Cards (Mobile) ───────── */}
+      {screens.md ? (
+        <Table
+          rowKey="_id"
+          dataSource={filteredCampaigns}
+          columns={columns}
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showTotal: (total) => `${total} / ${campaigns.length} khóa học`,
+            showSizeChanger: false,
+          }}
+          scroll={{ x: 800 }}
+          size="middle"
+          locale={{
+            emptyText: hasActiveFilter
+              ? 'Không tìm thấy kết quả phù hợp.'
+              : 'Chưa có khóa học nào. Hãy thêm mới!',
+          }}
+        />
+      ) : loading ? (
+        <Card loading style={{ borderRadius: 8, marginBottom: 12 }} />
+      ) : filteredCampaigns.length === 0 ? (
+        <Empty
+          description={
+            hasActiveFilter
+              ? 'Không tìm thấy kết quả phù hợp.'
+              : 'Chưa có khóa học nào. Hãy thêm mới!'
+          }
+          style={{ padding: '32px 0' }}
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {filteredCampaigns.map((record) => (
+            <div
+              key={record._id}
+              className="mobile-campaign-card"
+              style={{
+                padding: '16px',
+                border: '1px solid #f0f0f0',
+                borderRadius: '8px',
+                marginBottom: '12px',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+              }}
+            >
+              {/* Header (Tiêu đề & Thao tác) */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}
+              >
+                {/* Bên trái: Tiêu đề khóa học */}
+                <div
+                  style={{
+                    flex: 1,
+                    whiteSpace: 'normal',
+                    wordWrap: 'break-word',
+                    fontWeight: 'bold',
+                    fontSize: '15px',
+                    color: '#1f1f1f',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {record.title}
+                </div>
+
+                {/* Bên phải: Nhóm các icon thao tác (Switch Ẩn/Hiện, Edit, Delete) gap: 12px */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Tooltip
+                    title={
+                      !record.isHidden
+                        ? 'Đang hiển thị (Click để ẩn)'
+                        : 'Đang ẩn (Click để hiện)'
+                    }
+                  >
+                    <Switch
+                      size="small"
+                      checked={!record.isHidden}
+                      loading={togglingId === record._id}
+                      onChange={() => handleToggleHidden(record)}
+                      checkedChildren="Hiện"
+                      unCheckedChildren="Ẩn"
+                      style={{
+                        backgroundColor: !record.isHidden ? '#34C759' : undefined,
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Chỉnh sửa">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => openEdit(record)}
+                      id={`btn-edit-campaign-${record._id}`}
+                    />
+                  </Tooltip>
+                  <Popconfirm
+                    title="Xác nhận xóa"
+                    description={`Bạn chắc chắn muốn xóa khóa học "${record.title}"?`}
+                    onConfirm={() => handleDelete(record)}
+                    okText="Xóa"
+                    okButtonProps={{ danger: true }}
+                    cancelText="Hủy"
+                    placement="topRight"
+                  >
+                    <Tooltip title="Xóa">
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        id={`btn-delete-campaign-${record._id}`}
+                      />
+                    </Tooltip>
+                  </Popconfirm>
+                </div>
+              </div>
+
+              {/* Body (Mô tả): Nằm dưới tiêu đề, marginTop: 8px */}
+              <div
+                style={{
+                  marginTop: '8px',
+                  color: '#666666',
+                  fontSize: '13px',
+                  lineHeight: 1.5,
+                  whiteSpace: 'normal',
+                  wordWrap: 'break-word',
+                }}
+              >
+                {record.description?.trim() ? record.description : '—'}
+              </div>
+
+              {/* Các tháng học nếu có */}
+              {Array.isArray(record.months) && record.months.length > 0 && (
+                <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {record.months.map((m) => (
+                    <Tag key={m} color="blue" style={{ fontWeight: 600, fontSize: 11, margin: 0 }}>
+                      {m}
+                    </Tag>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Modal Thêm / Sửa ────────────────────────────────────────────── */}
       <Modal
