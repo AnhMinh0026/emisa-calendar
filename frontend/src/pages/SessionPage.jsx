@@ -1001,8 +1001,14 @@ export default function SessionPage() {
     <>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <Flex justify="space-between" align="center" wrap="wrap" gap={12} style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Quản lý Lớp học</Title>
-        <Space wrap>
+        <Title level={4} style={{ margin: 0, fontSize: !screens.md ? 18 : 20 }}>
+          Quản lý Lớp học
+        </Title>
+        <Flex
+          align="center"
+          gap={8}
+          style={{ width: !screens.md ? '100%' : 'auto' }}
+        >
           <Tooltip title="Tải lại">
             <Button icon={<ReloadOutlined />} onClick={fetchSessions} loading={loading} />
           </Tooltip>
@@ -1011,10 +1017,11 @@ export default function SessionPage() {
             icon={<PlusOutlined />}
             onClick={openCreate}
             id="btn-add-session"
+            style={{ flex: !screens.md ? 1 : undefined }}
           >
             Thêm Lớp học
           </Button>
-        </Space>
+        </Flex>
       </Flex>
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}

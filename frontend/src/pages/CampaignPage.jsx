@@ -270,11 +270,23 @@ export default function CampaignPage() {
   return (
     <>
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <Flex justify="space-between" align="center" gap={12} style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0, fontSize: !screens.md ? 18 : 20, whiteSpace: 'nowrap' }}>
+      <Flex
+        justify="space-between"
+        align="center"
+        wrap="wrap"
+        gap={12}
+        style={{ marginBottom: 16 }}
+      >
+        <Title level={4} style={{ margin: 0, fontSize: !screens.md ? 18 : 20 }}>
           Quản lý Khóa học
         </Title>
-        <Flex align="center" gap={8} style={{ flexShrink: 0 }}>
+        <Flex
+          align="center"
+          gap={8}
+          style={{
+            width: !screens.md ? '100%' : 'auto',
+          }}
+        >
           <Tooltip title="Tải lại">
             <Button icon={<ReloadOutlined />} onClick={fetchCampaigns} loading={loading} />
           </Tooltip>
@@ -283,6 +295,7 @@ export default function CampaignPage() {
             icon={<PlusOutlined />}
             onClick={openCreate}
             id="btn-add-campaign"
+            style={{ flex: !screens.md ? 1 : undefined }}
           >
             Thêm Khóa học
           </Button>
