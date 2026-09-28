@@ -1,13 +1,26 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; background-color: #F5F5F7; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100vw;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  background-color: #F5F5F7;
+}
 
 /* ── Month Tabs (cấp 2): làm nổi bật tab tháng đang active ── */
 .month-tabs .ant-tabs-tab-active {
-  border-color: #1677ff !important;
-  background-color: #e6f4ff !important; /* Nền xanh cực nhạt, đồng tông với tag Khung giờ */
+  border-color: #141414 !important;
+  background-color: #141414 !important;
 }
+
 .month-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #1677ff !important;
+  color: #ffffff !important;
   font-weight: 600;
 }
 
@@ -18,6 +31,7 @@ html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system,
 }
 
 @media (max-width: 768px) {
+
   /* Hiệu ứng bóng mờ nhẹ (fade gradient) ở mép phải khung chứa Tabs */
   .month-tabs-scroll-wrapper::after {
     content: '';
@@ -41,13 +55,17 @@ html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system,
     overflow-x: auto !important;
     white-space: nowrap !important;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none !important; /* Firefox */
-    -ms-overflow-style: none !important; /* IE/Edge */
-    padding-right: 28px !important; /* Tháng cuối lấp ló ra một nửa báo hiệu có thể vuốt */
+    scrollbar-width: none !important;
+    /* Firefox */
+    -ms-overflow-style: none !important;
+    /* IE/Edge */
+    padding-right: 28px !important;
+    /* Tháng cuối lấp ló ra một nửa báo hiệu có thể vuốt */
   }
 
   .month-tabs .ant-tabs-nav-wrap::-webkit-scrollbar {
-    display: none !important; /* Chrome / Safari */
+    display: none !important;
+    /* Chrome / Safari */
   }
 
   .month-tabs .ant-tabs-nav-list {
@@ -63,11 +81,13 @@ html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system,
 
 /* ── Mobile Responsive Table Padding ── */
 @media (max-width: 768px) {
-  .ant-table .ant-table-thead > tr > th,
-  .ant-table .ant-table-tbody > tr > td {
+
+  .ant-table .ant-table-thead>tr>th,
+  .ant-table .ant-table-tbody>tr>td {
     padding: 8px 8px !important;
     font-size: 13px !important;
   }
+
   .ant-table-pagination {
     margin: 12px 0 !important;
     flex-wrap: wrap !important;
@@ -82,6 +102,7 @@ html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system,
 .mobile-student-card {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+
 .mobile-session-card:active,
 .mobile-campaign-card:active,
 .mobile-student-card:active {
@@ -90,16 +111,22 @@ html, body, #root { width: 100vw; min-height: 100vh; font-family: -apple-system,
 
 /* ── Mobile Month Pills Bar ── */
 .mobile-month-pills-bar {
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* IE/Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
+  -ms-overflow-style: none !important;
+  /* IE/Edge */
   -webkit-overflow-scrolling: touch;
 }
+
 .mobile-month-pills-bar::-webkit-scrollbar {
-  display: none !important; /* Chrome / Safari */
+  display: none !important;
+  /* Chrome / Safari */
 }
+
 .mobile-month-pill {
   transition: all 0.25s ease !important;
 }
+
 .mobile-month-pill:active {
   transform: scale(0.95);
 }

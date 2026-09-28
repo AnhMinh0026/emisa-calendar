@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Table, Button, Modal, Form, Input,
+  Table, Button, Modal, Drawer, Form, Input,
   Space, Tag, Popconfirm, App, Typography, Tooltip,
   Flex, Select, Switch, Row, Col, Grid, Card, Empty,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  ReloadOutlined, SearchOutlined, FilterOutlined,
+  ReloadOutlined, FilterOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../services/api';
@@ -49,6 +50,7 @@ export default function CampaignPage() {
   // ── State Filter ───────────────────────────────────────────────────────────
   const [searchText, setSearchText] = useState('');
   const [filterMonth, setFilterMonth] = useState(null); // 'MM/YYYY' | null
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchCampaigns = useCallback(async () => {
@@ -290,6 +292,22 @@ export default function CampaignPage() {
           <Tooltip title={screens.md ? "Tải lại" : null}>
             <Button icon={<ReloadOutlined />} onClick={fetchCampaigns} loading={loading} />
           </Tooltip>
+          {!screens.md && (
+            <Button
+              icon={<FilterOutlined />}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              type={isFilterOpen ? 'primary' : 'default'}
+              ghost={isFilterOpen}
+              id="btn-toggle-filter-campaign"
+              style={
+                hasActiveFilter && !isFilterOpen
+                  ? { borderColor: '#141414', color: '#141414', fontWeight: 600 }
+                  : undefined
+              }
+            >
+              Lọc{hasActiveFilter ? ' •' : ''}
+            </Button>
+          )}
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -302,54 +320,67 @@ export default function CampaignPage() {
         </Flex>
       </Flex>
 
-      {/* ── Toolbar: Search + Filter tháng ──────────────────────────────── */}
-      <Row
-        gutter={[12, 12]}
-        align="middle"
-        style={{
-          marginBottom: 16,
-          padding: '12px 14px',
-          background: '#fafafa',
-          borderRadius: 8,
-          border: '1px solid #f0f0f0',
-        }}
+      {/* ── Toolbar: Search + Filter tháng (Collapsible on Mobile, Normal on Desktop) ─ */}
+      <div
+        style={
+          screens.md
+            ? { marginBottom: 16 }
+            : {
+                maxHeight: isFilterOpen ? 260 : 0,
+                opacity: isFilterOpen ? 1 : 0,
+                overflow: isFilterOpen ? 'visible' : 'hidden',
+                transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-bottom 0.3s ease',
+                marginBottom: isFilterOpen ? 16 : 0,
+                pointerEvents: isFilterOpen ? 'auto' : 'none',
+              }
+        }
       >
-        <Col xs={24} sm={12} md={8}>
-          <Input.Search
-            placeholder="Tìm theo tên khóa học..."
-            allowClear
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            prefix={<SearchOutlined />}
-            style={{ width: '100%' }}
-            id="search-campaign"
-          />
-        </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Select
-            placeholder="Lọc theo tháng"
-            allowClear
-            showSearch
-            value={filterMonth}
-            onChange={(val) => setFilterMonth(val ?? null)}
-            options={MONTH_OPTIONS}
-            style={{ width: '100%' }}
-            id="filter-campaign-month"
-          />
-        </Col>
-
-        {hasActiveFilter && (
-          <Col xs={24} md={10}>
-            <Flex align="center" justify="space-between" gap={8} wrap="wrap">
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                Tìm thấy <Text strong>{filteredCampaigns.length}</Text> / {campaigns.length} kết quả
-              </Text>
-              <Button size="small" onClick={resetFilters}>Xóa bộ lọc</Button>
-            </Flex>
+        <Row
+          gutter={[12, 12]}
+          align="middle"
+          style={{
+            padding: '12px 14px',
+            background: '#fafafa',
+            borderRadius: 8,
+            border: '1px solid #f0f0f0',
+          }}
+        >
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
+              placeholder="Tìm theo tên khóa học..."
+              allowClear
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: '100%' }}
+              id="search-campaign"
+            />
           </Col>
-        )}
-      </Row>
+
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              placeholder="Lọc theo tháng"
+              allowClear
+              showSearch
+              value={filterMonth}
+              onChange={(val) => setFilterMonth(val ?? null)}
+              options={MONTH_OPTIONS}
+              style={{ width: '100%' }}
+              id="filter-campaign-month"
+            />
+          </Col>
+
+          {hasActiveFilter && (
+            <Col xs={24} md={10}>
+              <Flex align="center" justify="space-between" gap={8} wrap="wrap">
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Tìm thấy <Text strong>{filteredCampaigns.length}</Text> / {campaigns.length} kết quả
+                </Text>
+                <Button size="small" onClick={resetFilters}>Xóa bộ lọc</Button>
+              </Flex>
+            </Col>
+          )}
+        </Row>
+      </div>
 
       {/* ── Danh sách Khóa học: Table (Desktop) / Cards (Mobile) ───────── */}
       {screens.md ? (
@@ -511,75 +542,115 @@ export default function CampaignPage() {
         </div>
       )}
 
-      {/* ── Modal Thêm / Sửa ────────────────────────────────────────────── */}
-      <Modal
-        title={
-          <Space>
-            {editTarget ? 'Chỉnh sửa Khóa học' : 'Thêm Khóa học mới'}
-          </Space>
-        }
-        open={modalOpen}
-        onCancel={closeModal}
-        onOk={handleSubmit}
-        okText={editTarget ? 'Lưu thay đổi' : 'Tạo mới'}
-        cancelText="Hủy"
-        confirmLoading={submitting}
-        destroyOnHidden
-        width={620}
-        style={{ top: !screens.md ? 10 : undefined, marginBottom: !screens.md ? 32 : undefined }}
-        styles={{
-          body: { paddingBottom: !screens.md ? 'max(24px, env(safe-area-inset-bottom))' : undefined },
-          footer: { paddingBottom: !screens.md ? 'max(24px, env(safe-area-inset-bottom))' : undefined },
-        }}
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }} requiredMark="optional">
+      {/* ── Modal / Drawer Thêm / Sửa ────────────────────────────────────── */}
+      {(() => {
+        const campaignFormNode = (
+          <Form form={form} layout="vertical" style={{ marginTop: screens.md ? 16 : 8 }} requiredMark="optional">
+            <Form.Item
+              name="title"
+              label="Tiêu đề khóa học"
+              rules={[{ required: true, message: 'Vui lòng nhập tiêu đề khóa học.' }]}
+            >
+              <Input
+                placeholder="VD: Khoá cơ bản"
+                maxLength={100}
+                showCount
+                id="input-campaign-title"
+              />
+            </Form.Item>
 
-          <Form.Item
-            name="title"
-            label="Tiêu đề khóa học"
-            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề khóa học.' }]}
+            <Form.Item name="description" label="Mô tả (tùy chọn)">
+              <Input.TextArea
+                rows={3}
+                placeholder="Ghi chú thêm về khóa học..."
+                maxLength={300}
+                showCount
+                id="input-campaign-description"
+              />
+            </Form.Item>
+
+            {/* Chọn nhiều tháng */}
+            <Form.Item
+              name="months"
+              label="Các tháng của khóa học"
+              extra="Chọn một hoặc nhiều tháng. Thứ tự sẽ tự động sắp xếp tăng dần."
+              rules={[{
+                required: true,
+                type: 'array',
+                min: 1,
+                message: 'Vui lòng chọn ít nhất một tháng.',
+              }]}
+            >
+              <Select
+                mode="multiple"
+                placeholder="Chọn tháng..."
+                options={MONTH_OPTIONS}
+                showSearch
+                optionFilterProp="label"
+                allowClear
+                id="select-campaign-months"
+              />
+            </Form.Item>
+          </Form>
+        );
+
+        const formTitle = editTarget ? 'Chỉnh sửa Khóa học' : 'Thêm Khóa học mới';
+        const submitText = editTarget ? 'Lưu thay đổi' : 'Tạo mới';
+
+        return screens.md ? (
+          <Modal
+            title={formTitle}
+            open={modalOpen}
+            onCancel={closeModal}
+            onOk={handleSubmit}
+            okText={submitText}
+            cancelText="Hủy"
+            confirmLoading={submitting}
+            destroyOnClose
+            width={620}
           >
-            <Input
-              placeholder="VD: Khoá cơ bản"
-              maxLength={100} showCount
-              id="input-campaign-title"
-            />
-          </Form.Item>
-
-          <Form.Item name="description" label="Mô tả (tùy chọn)">
-            <Input.TextArea
-              rows={2}
-              placeholder="Ghi chú thêm về khóa học..."
-              maxLength={300} showCount
-              id="input-campaign-description"
-            />
-          </Form.Item>
-
-          {/* Chọn nhiều tháng */}
-          <Form.Item
-            name="months"
-            label="Các tháng của khóa học"
-            extra="Chọn một hoặc nhiều tháng. Thứ tự sẽ tự động sắp xếp tăng dần."
-            rules={[{
-              required: true,
-              type: 'array',
-              min: 1,
-              message: 'Vui lòng chọn ít nhất một tháng.',
-            }]}
+            {campaignFormNode}
+          </Modal>
+        ) : (
+          <Drawer
+            title={formTitle}
+            placement="right"
+            width="100%"
+            open={modalOpen}
+            onClose={closeModal}
+            closeIcon={<ArrowLeftOutlined />}
+            destroyOnClose
+            styles={{
+              body: { padding: '16px' },
+            }}
+            footer={
+              <div
+                style={{
+                  paddingBottom: 'env(safe-area-inset-bottom, 20px)',
+                  display: 'flex',
+                  gap: 12,
+                  justifyContent: 'flex-end',
+                }}
+              >
+                <Button onClick={closeModal} style={{ flex: 1 }}>
+                  Hủy
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={handleSubmit}
+                  loading={submitting}
+                  style={{ flex: 1 }}
+                  id="drawer-btn-submit-campaign"
+                >
+                  {submitText}
+                </Button>
+              </div>
+            }
           >
-            <Select
-              mode="multiple"
-              placeholder="Chọn tháng..."
-              options={MONTH_OPTIONS}
-              showSearch
-              optionFilterProp="label"
-              allowClear
-              id="select-campaign-months"
-            />
-          </Form.Item>
-
-        </Form>
-      </Modal>
+            {campaignFormNode}
+          </Drawer>
+        );
+      })()}
     </>
   );
 }

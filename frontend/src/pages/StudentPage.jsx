@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Table, Button, Modal, Form, Input, InputNumber,
+  Table, Button, Modal, Drawer, Form, Input, InputNumber,
   Select, Space, Tag, Popconfirm, App, Typography,
   Tooltip, Flex, Empty, Switch, Row, Col, Grid, Card,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  ReloadOutlined, SearchOutlined, UserOutlined,
+  ReloadOutlined, FilterOutlined, UserOutlined,
   DollarOutlined, TeamOutlined, PhoneOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../services/api';
@@ -39,6 +40,7 @@ export default function StudentPage() {
   const [searchText, setSearchText] = useState('');
   const [filterPaid, setFilterPaid] = useState(null); // true | false | null
   const [filterSession, setFilterSession] = useState(null); // sessionId | null
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // ── Fetch dữ liệu học viên & danh sách lớp ──────────────────────────────────
   const fetchStudents = useCallback(async () => {
@@ -373,6 +375,22 @@ export default function StudentPage() {
           <Tooltip title={screens.md ? "Tải lại" : null}>
             <Button icon={<ReloadOutlined />} onClick={fetchStudents} loading={loading} />
           </Tooltip>
+          {!screens.md && (
+            <Button
+              icon={<FilterOutlined />}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              type={isFilterOpen ? 'primary' : 'default'}
+              ghost={isFilterOpen}
+              id="btn-toggle-filter-student"
+              style={
+                hasActiveFilter && !isFilterOpen
+                  ? { borderColor: '#141414', color: '#141414', fontWeight: 600 }
+                  : undefined
+              }
+            >
+              Lọc{hasActiveFilter ? ' •' : ''}
+            </Button>
+          )}
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -385,72 +403,85 @@ export default function StudentPage() {
         </Flex>
       </Flex>
 
-      {/* ── Toolbar: Search + Lọc Trạng thái & Lớp học ──────────────────── */}
-      <Row
-        gutter={[12, 12]}
-        align="middle"
-        style={{
-          marginBottom: 16,
-          padding: '12px 14px',
-          background: '#fafafa',
-          borderRadius: 8,
-          border: '1px solid #f0f0f0',
-        }}
+      {/* ── Toolbar: Search + Lọc Trạng thái & Lớp học (Collapsible on Mobile, Normal on Desktop) ── */}
+      <div
+        style={
+          screens.md
+            ? { marginBottom: 16 }
+            : {
+                maxHeight: isFilterOpen ? 260 : 0,
+                opacity: isFilterOpen ? 1 : 0,
+                overflow: isFilterOpen ? 'visible' : 'hidden',
+                transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-bottom 0.3s ease',
+                marginBottom: isFilterOpen ? 16 : 0,
+                pointerEvents: isFilterOpen ? 'auto' : 'none',
+              }
+        }
       >
-        <Col xs={24} sm={12} md={8}>
-          <Input.Search
-            placeholder="Tìm theo tên, SĐT, mã lớp..."
-            allowClear
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            prefix={<SearchOutlined />}
-            style={{ width: '100%' }}
-            id="search-student"
-          />
-        </Col>
-
-        <Col xs={12} sm={6} md={5}>
-          <Select
-            placeholder="Trạng thái"
-            allowClear
-            value={filterPaid}
-            onChange={(val) => setFilterPaid(val ?? null)}
-            style={{ width: '100%' }}
-            id="filter-student-status"
-            options={[
-              { value: true, label: '✓ Đã đóng xong' },
-              { value: false, label: '⏳ Còn nợ' },
-            ]}
-          />
-        </Col>
-
-        <Col xs={12} sm={6} md={5}>
-          <Select
-            placeholder="Lọc theo Lớp học"
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            value={filterSession}
-            onChange={(val) => setFilterSession(val ?? null)}
-            style={{ width: '100%' }}
-            id="filter-student-session"
-            options={sessionOptions}
-          />
-        </Col>
-
-        {hasActiveFilter && (
-          <Col xs={24} md={6}>
-            <Flex align="center" justify="space-between" gap={8} wrap="wrap">
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                Tìm thấy <Text strong>{filteredStudents.length}</Text> / {students.length} học viên
-              </Text>
-              <Button size="small" onClick={resetFilters}>
-                Xóa bộ lọc
-              </Button>
-            </Flex>
+        <Row
+          gutter={[12, 12]}
+          align="middle"
+          style={{
+            padding: '12px 14px',
+            background: '#fafafa',
+            borderRadius: 8,
+            border: '1px solid #f0f0f0',
+          }}
+        >
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
+              placeholder="Tìm theo tên, SĐT, mã lớp..."
+              allowClear
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: '100%' }}
+              id="search-student"
+            />
           </Col>
-        )}
-      </Row>
+
+          <Col xs={12} sm={6} md={5}>
+            <Select
+              placeholder="Trạng thái"
+              allowClear
+              value={filterPaid}
+              onChange={(val) => setFilterPaid(val ?? null)}
+              style={{ width: '100%' }}
+              id="filter-student-status"
+              options={[
+                { value: true, label: '✓ Đã đóng xong' },
+                { value: false, label: '⏳ Còn nợ' },
+              ]}
+            />
+          </Col>
+
+          <Col xs={12} sm={6} md={5}>
+            <Select
+              placeholder="Lọc theo Lớp học"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              value={filterSession}
+              onChange={(val) => setFilterSession(val ?? null)}
+              style={{ width: '100%' }}
+              id="filter-student-session"
+              options={sessionOptions}
+            />
+          </Col>
+
+          {hasActiveFilter && (
+            <Col xs={24} md={6}>
+              <Flex align="center" justify="space-between" gap={8} wrap="wrap">
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Tìm thấy <Text strong>{filteredStudents.length}</Text> / {students.length} học viên
+                </Text>
+                <Button size="small" onClick={resetFilters}>
+                  Xóa bộ lọc
+                </Button>
+              </Flex>
+            </Col>
+          )}
+        </Row>
+      </div>
 
       {/* ── Bảng (Desktop) hoặc Danh sách Thẻ (Mobile) ────────────────── */}
       {screens.md ? (
@@ -586,148 +617,192 @@ export default function StudentPage() {
         </div>
       )}
 
-      {/* ── Modal Thêm / Chỉnh sửa Học viên ─────────────────────────────── */}
-      <Modal
-        title={editTarget ? 'Chỉnh sửa thông tin Học viên' : 'Thêm Học viên mới'}
-        open={modalOpen}
-        onCancel={closeModal}
-        onOk={handleSubmit}
-        okText={editTarget ? 'Lưu thay đổi' : 'Thêm học viên'}
-        cancelText="Hủy"
-        confirmLoading={submitting}
-        destroyOnHidden
-        width={540}
-        style={{ top: !screens.md ? 10 : undefined, marginBottom: !screens.md ? 32 : undefined }}
-        styles={{
-          body: { paddingBottom: !screens.md ? 'max(28px, env(safe-area-inset-bottom))' : undefined },
-          footer: { paddingBottom: !screens.md ? 'max(24px, env(safe-area-inset-bottom))' : undefined },
-        }}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          style={{ marginTop: 16 }}
-          requiredMark="optional"
-          onValuesChange={handleValuesChange}
-        >
-          {/* Lớp học */}
-          <Form.Item
-            name="sessionId"
-            label="Lớp học đăng ký"
-            rules={[{ required: true, message: 'Vui lòng chọn lớp học.' }]}
+      {/* ── Modal / Drawer Thêm / Chỉnh sửa Học viên ───────────────────── */}
+      {(() => {
+        const studentFormNode = (
+          <Form
+            form={form}
+            layout="vertical"
+            style={{ marginTop: screens.md ? 16 : 8 }}
+            requiredMark="optional"
+            onValuesChange={handleValuesChange}
           >
-            <Select
-              placeholder="Chọn lớp học..."
-              showSearch
-              optionFilterProp="label"
-              options={sessionOptions}
-              id="select-student-session"
-            />
-          </Form.Item>
+            {/* Lớp học */}
+            <Form.Item
+              name="sessionId"
+              label="Lớp học đăng ký"
+              rules={[{ required: true, message: 'Vui lòng chọn lớp học.' }]}
+            >
+              <Select
+                placeholder="Chọn lớp học..."
+                showSearch
+                optionFilterProp="label"
+                options={sessionOptions}
+                id="select-student-session"
+              />
+            </Form.Item>
 
-          <Row gutter={12}>
-            {/* Họ tên */}
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="name"
-                label="Họ và tên"
-                rules={[{ required: true, message: 'Vui lòng nhập họ tên học viên.' }]}
-              >
-                <Input
-                  placeholder="VD: Nguyễn Văn A"
-                  prefix={<UserOutlined style={{ color: '#bbb' }} />}
-                  id="input-student-name"
-                  autoComplete="off"
-                />
-              </Form.Item>
-            </Col>
+            <Row gutter={12}>
+              {/* Họ tên */}
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="name"
+                  label="Họ và tên"
+                  rules={[{ required: true, message: 'Vui lòng nhập họ tên học viên.' }]}
+                >
+                  <Input
+                    placeholder="VD: Nguyễn Văn A"
+                    prefix={<UserOutlined style={{ color: '#bbb' }} />}
+                    id="input-student-name"
+                    autoComplete="off"
+                  />
+                </Form.Item>
+              </Col>
 
-            {/* Số điện thoại */}
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="phone"
-                label="Số điện thoại"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập số điện thoại.' },
-                  { pattern: /^[0-9+\-\s]{8,15}$/, message: 'Số điện thoại không hợp lệ.' },
-                ]}
-              >
-                <Input
-                  placeholder="VD: 0901234567"
-                  prefix={<PhoneOutlined style={{ color: '#bbb' }} />}
-                  id="input-student-phone"
-                  autoComplete="off"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+              {/* Số điện thoại */}
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="phone"
+                  label="Số điện thoại"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập số điện thoại.' },
+                    { pattern: /^[0-9+\-\s]{8,15}$/, message: 'Số điện thoại không hợp lệ.' },
+                  ]}
+                >
+                  <Input
+                    placeholder="VD: 0901234567"
+                    prefix={<PhoneOutlined style={{ color: '#bbb' }} />}
+                    id="input-student-phone"
+                    autoComplete="off"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Row gutter={12}>
-            {/* Tiền đã cọc */}
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="depositAmount"
-                label="Số tiền đã cọc (đ)"
-              >
-                <InputNumber
-                  min={0}
-                  step={100000}
-                  formatter={(v) => (v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '')}
-                  parser={(v) => v?.replace(/,/g, '') || 0}
-                  style={{ width: '100%' }}
-                  placeholder="0"
-                  prefix={<DollarOutlined style={{ color: '#bbb' }} />}
-                  id="input-student-deposit"
-                />
-              </Form.Item>
-            </Col>
+            <Row gutter={12}>
+              {/* Tiền đã cọc */}
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="depositAmount"
+                  label="Số tiền đã cọc (đ)"
+                >
+                  <InputNumber
+                    min={0}
+                    step={100000}
+                    formatter={(v) => (v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '')}
+                    parser={(v) => v?.replace(/,/g, '') || 0}
+                    style={{ width: '100%' }}
+                    placeholder="0"
+                    prefix={<DollarOutlined style={{ color: '#bbb' }} />}
+                    id="input-student-deposit"
+                  />
+                </Form.Item>
+              </Col>
 
-            {/* Tiền còn nợ */}
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="remainingAmount"
-                label="Số tiền còn nợ (đ)"
-              >
-                <InputNumber
-                  min={0}
-                  step={100000}
-                  formatter={(v) => (v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '')}
-                  parser={(v) => v?.replace(/,/g, '') || 0}
-                  style={{ width: '100%' }}
-                  placeholder="0"
-                  id="input-student-remaining"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+              {/* Tiền còn nợ */}
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="remainingAmount"
+                  label="Số tiền còn nợ (đ)"
+                >
+                  <InputNumber
+                    min={0}
+                    step={100000}
+                    formatter={(v) => (v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '')}
+                    parser={(v) => v?.replace(/,/g, '') || 0}
+                    style={{ width: '100%' }}
+                    placeholder="0"
+                    id="input-student-remaining"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          {/* Switch Đã đóng xong */}
-          <Form.Item
-            name="isFullyPaid"
-            label="Trạng thái hoàn thành học phí"
-            valuePropName="checked"
-            extra="Khi bật 'Đã đóng xong', hệ thống sẽ tự động gán Còn nợ = 0 và cộng dồn nợ vào Tiền cọc."
+            {/* Switch Đã đóng xong */}
+            <Form.Item
+              name="isFullyPaid"
+              label="Trạng thái hoàn thành học phí"
+              valuePropName="checked"
+              extra="Khi bật 'Đã đóng xong', hệ thống sẽ tự động gán Còn nợ = 0 và cộng dồn nợ vào Tiền cọc."
+            >
+              <Switch
+                checkedChildren="✓ Đã đóng xong"
+                unCheckedChildren="Còn nợ"
+                id="switch-student-fully-paid"
+              />
+            </Form.Item>
+
+            {/* Ghi chú thanh toán */}
+            <Form.Item
+              name="paymentNote"
+              label="Ghi chú thanh toán"
+            >
+              <Input.TextArea
+                rows={2}
+                placeholder="VD: Đã đóng tiền mặt, Chuyển khoản qua Techcombank..."
+                id="input-student-note"
+              />
+            </Form.Item>
+          </Form>
+        );
+
+        const formTitle = editTarget ? 'Chỉnh sửa thông tin Học viên' : 'Thêm Học viên mới';
+        const submitText = editTarget ? 'Lưu thay đổi' : 'Thêm học viên';
+
+        return screens.md ? (
+          <Modal
+            title={formTitle}
+            open={modalOpen}
+            onCancel={closeModal}
+            onOk={handleSubmit}
+            okText={submitText}
+            cancelText="Hủy"
+            confirmLoading={submitting}
+            destroyOnClose
+            width={540}
           >
-            <Switch
-              checkedChildren="✓ Đã đóng xong"
-              unCheckedChildren="Còn nợ"
-              id="switch-student-fully-paid"
-            />
-          </Form.Item>
-
-          {/* Ghi chú thanh toán */}
-          <Form.Item
-            name="paymentNote"
-            label="Ghi chú thanh toán"
+            {studentFormNode}
+          </Modal>
+        ) : (
+          <Drawer
+            title={formTitle}
+            placement="right"
+            width="100%"
+            open={modalOpen}
+            onClose={closeModal}
+            closeIcon={<ArrowLeftOutlined />}
+            destroyOnClose
+            styles={{
+              body: { padding: '16px' },
+            }}
+            footer={
+              <div
+                style={{
+                  paddingBottom: 'env(safe-area-inset-bottom, 20px)',
+                  display: 'flex',
+                  gap: 12,
+                  justifyContent: 'flex-end',
+                }}
+              >
+                <Button onClick={closeModal} style={{ flex: 1 }}>
+                  Hủy
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={handleSubmit}
+                  loading={submitting}
+                  style={{ flex: 1 }}
+                  id="drawer-btn-submit-student"
+                >
+                  {submitText}
+                </Button>
+              </div>
+            }
           >
-            <Input.TextArea
-              rows={2}
-              placeholder="VD: Đã đóng tiền mặt, Chuyển khoản qua Techcombank..."
-              id="input-student-note"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+            {studentFormNode}
+          </Drawer>
+        );
+      })()}
     </>
   );
 }
