@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  Row, Col, Card, Typography, Flex, Spin, Empty, Modal, Button, ConfigProvider, Grid,
+  Row, Col, Card, Typography, Flex, Spin, Modal, Button, ConfigProvider, Grid, DatePicker,
 } from 'antd';
 import {
   FacebookFilled, MessageOutlined,
@@ -43,6 +43,20 @@ const groupSessions = (sessions) => {
   return groups;
 };
 
+// ── parseMonthKey — Tách { month, year } từ chuỗi 'MM/YYYY' hoặc 'M/YYYY' ────
+const parseMonthKey = (monthStr) => {
+  if (!monthStr || typeof monthStr !== 'string') return null;
+  const parts = monthStr.trim().split('/').map((p) => parseInt(p, 10));
+  if (parts.length >= 2) {
+    const [mm, yyyy] = parts;
+    if (!isNaN(mm) && !isNaN(yyyy) && mm >= 1 && mm <= 12) return { month: mm, year: yyyy };
+  } else if (parts.length === 1 && !isNaN(parts[0])) {
+    const mm = parts[0];
+    if (mm >= 1 && mm <= 12) return { month: mm, year: dayjs().year() };
+  }
+  return null;
+};
+
 // ── Pill Button ───────────────────────────────────────────────────────────────
 function Pill({ label, active, onClick, id }) {
   return (
@@ -74,12 +88,12 @@ function SessionCard({ session, onRegister }) {
 
   return (
     <Card
-      className="session-card"
-      hoverable
+      className={`session-card ${!isFull ? 'session-card-interactive' : 'session-card-disabled'}`}
+      hoverable={!isFull}
       onClick={() => !isFull && onRegister?.(session)}
       styles={{
         body: {
-          padding: '10px 8px 12px',
+          padding: screens.md ? '12px 14px 16px' : '14px 16px 18px',
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
@@ -91,7 +105,8 @@ function SessionCard({ session, onRegister }) {
         background: T.white,
         border: `1px solid ${T.gray2}`,
         overflow: 'hidden',
-        cursor: isFull ? 'default' : 'pointer',
+        cursor: !isFull ? 'pointer' : 'default',
+        transition: 'all 0.3s ease',
       }}
     >
       {/* Header: Mã lớp & Trạng thái */}
@@ -138,71 +153,99 @@ function SessionCard({ session, onRegister }) {
       <div
         className="session-time-slot"
         style={{
-          fontSize: screens.md ? 16 : 15,
-          fontWeight: 700,
-          color: T.black,
-          letterSpacing: -0.3,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
           marginBottom: 8,
-          lineHeight: 1.2,
+          fontSize: 13,
+          lineHeight: 1.4,
         }}
       >
-        {session.timeSlot}
+        <span style={{ color: '#8E8E93', fontSize: 13, flexShrink: 0 }}>
+          Giờ học:
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: T.black,
+            letterSpacing: -0.2,
+          }}
+        >
+          {session.timeSlot}
+        </span>
+      </div>
+
+      {/* Ngày học */}
+      <div
+        className="session-dates-row"
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 8,
+          marginBottom: 8,
+          fontSize: 13,
+          lineHeight: 1.4,
+          flex: 1,
+        }}
+      >
+        <span style={{ color: '#8E8E93', fontSize: 13, flexShrink: 0, paddingTop: 1 }}>
+          Ngày học:
+        </span>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            flex: 1,
+          }}
+        >
+          {sortedDates.map((d, i) => (
+            <span
+              key={i}
+              className="session-date-tag"
+              style={{
+                background: T.gray1,
+                color: T.black,
+                fontSize: 11,
+                fontWeight: 600,
+                padding: '2px 6px',
+                borderRadius: 4,
+                display: 'inline-block',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {dayjs(d).format('DD/MM')}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Sĩ số */}
       <div
         className="session-capacity"
         style={{
-          fontSize: screens.md ? 14 : 13,
-          color: '#8E8E93',
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
-          marginBottom: 8,
+          gap: 6,
+          fontSize: 13,
+          lineHeight: 1.4,
+          marginTop: 'auto',
+          paddingTop: 8,
           flexWrap: 'wrap',
         }}
       >
-        <span>Sĩ số:</span>
-        <span style={{ color: T.black, fontWeight: 600 }}>
+        <span style={{ color: '#8E8E93', fontSize: 13, flexShrink: 0 }}>
+          Sĩ số:
+        </span>
+        <span style={{ color: T.black, fontWeight: 600, fontSize: 13 }}>
           {session.currentBooked}/{session.maxCapacity}
         </span>
         {!isFull && (
-          <span style={{ color: '#8E8E93', fontSize: screens.md ? 13 : 12 }}>
+          <span style={{ color: '#8E8E93', fontSize: 12 }}>
             (còn {session.maxCapacity - session.currentBooked})
           </span>
         )}
-      </div>
-
-      {/* Ngày học: Render thẳng các Tag ngày học, không có chữ NGÀY HỌC */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          margin: '-2px',
-          flex: 1,
-          alignContent: 'flex-start',
-        }}
-      >
-        {sortedDates.map((d, i) => (
-          <span
-            key={i}
-            className="session-date-tag"
-            style={{
-              background: T.gray1,
-              color: T.black,
-              fontSize: screens.md ? '12px' : '10px',
-              fontWeight: 600,
-              padding: screens.md ? '2px 8px' : '0 4px',
-              margin: 2,
-              lineHeight: screens.md ? '20px' : '16px',
-              borderRadius: screens.md ? 6 : 4,
-              display: 'inline-block',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {dayjs(d).format('DD/MM')}
-          </span>
-        ))}
       </div>
     </Card>
   );
@@ -241,27 +284,79 @@ function ContactModal({ open, session, contactLinks, onClose }) {
       >
         {/* Thông tin lớp */}
         {session && (
-          <div style={{ background: T.gray1, borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: T.black, letterSpacing: -0.3, marginBottom: 8 }}>
-              {session.timeSlot}
+          <div style={{ background: T.gray1, borderRadius: 14, padding: '14px 16px', marginBottom: 20 }}>
+            {/* Giờ học */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 10,
+                fontSize: 13,
+                lineHeight: 1.4,
+              }}
+            >
+              <span style={{ color: '#8E8E93', fontSize: 13, flexShrink: 0 }}>
+                Giờ học:
+              </span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: T.black,
+                  letterSpacing: -0.2,
+                }}
+              >
+                {session.timeSlot}
+              </span>
             </div>
-            <Flex wrap="wrap" gap={4}>
-              {sortedDates.map((d, i) => (
-                <span key={i} style={{
-                  background: T.white, color: T.black,
-                  fontSize: 11, fontWeight: 600,
-                  padding: '3px 8px', borderRadius: 6,
-                  border: `1px solid ${T.gray2}`,
-                }}>
-                  {dayjs(d).format('DD/MM/YYYY')}
-                </span>
-              ))}
-            </Flex>
+
+            {/* Ngày học */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                fontSize: 13,
+                lineHeight: 1.4,
+              }}
+            >
+              <span style={{ color: '#8E8E93', fontSize: 13, flexShrink: 0, paddingTop: 3 }}>
+                Ngày học:
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 6,
+                  flex: 1,
+                }}
+              >
+                {sortedDates.map((d, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      background: T.white,
+                      color: T.black,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      border: `1px solid ${T.gray2}`,
+                      display: 'inline-block',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {dayjs(d).format('DD/MM/YYYY')}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* CTA text */}
-        <Paragraph style={{ color: T.gray3, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+        <Paragraph style={{ color: T.gray3, fontSize: 14, lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
           Vui lòng liên hệ với chúng tôi qua{' '}
           <strong style={{ color: T.black }}>Facebook</strong> hoặc{' '}
           <strong style={{ color: T.black }}>Zalo</strong>{' '}
@@ -269,60 +364,62 @@ function ContactModal({ open, session, contactLinks, onClose }) {
         </Paragraph>
 
         {/* Buttons */}
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
           {/* Facebook */}
-          <a
+          <Button
+            type="primary"
+            size="middle"
+            icon={<FacebookFilled style={{ fontSize: 16 }} />}
             href={hasFB ? contactLinks.facebook : undefined}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ flex: 1, display: 'block', textDecoration: 'none' }}
+            disabled={!hasFB}
+            className="btn-center-content"
+            style={{
+              width: 130,
+              height: 38,
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              background: hasFB ? '#1877F2' : undefined,
+              borderColor: hasFB ? '#1877F2' : undefined,
+              fontWeight: 600,
+              fontSize: 14,
+              boxShadow: 'none',
+            }}
           >
-            <button
-              disabled={!hasFB}
-              style={{
-                width: '100%', height: 48,
-                background: hasFB ? '#1877F2' : T.gray1,
-                color: hasFB ? T.white : T.gray3,
-                border: 'none', borderRadius: 12,
-                fontSize: 15, fontWeight: 600,
-                cursor: hasFB ? 'pointer' : 'not-allowed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                fontFamily: 'inherit', transition: 'opacity 0.15s',
-              }}
-              onMouseEnter={(e) => { if (hasFB) e.currentTarget.style.opacity = '0.88'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-            >
-              <FacebookFilled style={{ fontSize: 18 }} />
-              Facebook
-            </button>
-          </a>
+            Facebook
+          </Button>
 
           {/* Zalo */}
-          <a
+          <Button
+            type="primary"
+            size="middle"
+            icon={<MessageOutlined style={{ fontSize: 15 }} />}
             href={hasZalo ? contactLinks.zalo : undefined}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ flex: 1, display: 'block', textDecoration: 'none' }}
+            disabled={!hasZalo}
+            className="btn-center-content"
+            style={{
+              width: 130,
+              height: 38,
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              background: hasZalo ? '#0068FF' : undefined,
+              borderColor: hasZalo ? '#0068FF' : undefined,
+              fontWeight: 600,
+              fontSize: 14,
+              boxShadow: 'none',
+            }}
           >
-            <button
-              disabled={!hasZalo}
-              style={{
-                width: '100%', height: 48,
-                background: hasZalo ? '#0068FF' : T.gray1,
-                color: hasZalo ? T.white : T.gray3,
-                border: 'none', borderRadius: 12,
-                fontSize: 15, fontWeight: 600,
-                cursor: hasZalo ? 'pointer' : 'not-allowed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                fontFamily: 'inherit', transition: 'opacity 0.15s',
-              }}
-              onMouseEnter={(e) => { if (hasZalo) e.currentTarget.style.opacity = '0.88'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-            >
-              <MessageOutlined style={{ fontSize: 17 }} />
-              Zalo
-            </button>
-          </a>
+            Zalo
+          </Button>
         </div>
 
         {/* Hint khi chưa cấu hình */}
@@ -338,10 +435,12 @@ function ContactModal({ open, session, contactLinks, onClose }) {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function CustomerSchedulePage() {
+  const screens = Grid.useBreakpoint();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCampaignId, setActiveCampaignId] = useState(null);
   const [activeMonth, setActiveMonth] = useState(null);
+  const [filterDate, setFilterDate] = useState(null);
   const [registerSession, setRegisterSession] = useState(null);
   const [contactLinks, setContactLinks] = useState(null);
 
@@ -398,8 +497,39 @@ export default function CustomerSchedulePage() {
   const displaySessions = useMemo(() => {
     if (!activeCampaignId || !activeMonth) return [];
     const m = grouped[activeCampaignId]?.months[activeMonth] ?? [];
-    return [...m].sort((a, b) => a.classCode.localeCompare(b.classCode));
-  }, [grouped, activeCampaignId, activeMonth]);
+    let result = [...m].sort((a, b) => a.classCode.localeCompare(b.classCode));
+    if (filterDate) {
+      const targetStr = filterDate.format('YYYY-MM-DD');
+      result = result.filter((s) =>
+        (s.studyDates ?? []).some((d) => dayjs(d).format('YYYY-MM-DD') === targetStr)
+      );
+    }
+    return result;
+  }, [grouped, activeCampaignId, activeMonth, filterDate]);
+
+  // Reset filterDate khi đổi tháng hoặc đổi khóa học
+  useEffect(() => {
+    setFilterDate(null);
+  }, [activeMonth]);
+
+  // Parse activeMonth để dùng cho defaultPickerValue & disabledDate
+  const parsedActiveMonth = useMemo(() => parseMonthKey(activeMonth), [activeMonth]);
+
+  const defaultPickerValue = useMemo(() => {
+    if (!parsedActiveMonth) return dayjs();
+    return dayjs().year(parsedActiveMonth.year).month(parsedActiveMonth.month - 1).date(1).startOf('day');
+  }, [parsedActiveMonth]);
+
+  const disabledDateFilter = useCallback(
+    (current) => {
+      if (!current || !parsedActiveMonth) return false;
+      return (
+        current.month() + 1 !== parsedActiveMonth.month ||
+        current.year() !== parsedActiveMonth.year
+      );
+    },
+    [parsedActiveMonth]
+  );
 
   return (
     <div style={{
@@ -472,13 +602,39 @@ export default function CustomerSchedulePage() {
               </div>
             </>
           )}
+
           <div style={{ height: 1, background: T.gray1, marginTop: 4 }} />
         </div>
 
-        {/* Result count */}
-        {!loading && displaySessions.length > 0 && (
-          <div style={{ margin: '12px 0 20px' }}>
-            <Text style={{ fontSize: 13, color: T.gray3 }}>{displaySessions.length} lớp học</Text>
+        {/* Result count & Search bar */}
+        {!loading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, width: '100%', marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, color: T.gray3, whiteSpace: 'nowrap' }}>
+              {displaySessions.length} lớp học
+            </Text>
+            {activeMonth && (
+              <div style={{ flex: 1 }}>
+                <DatePicker
+                  key={activeMonth}
+                  placeholder="Tìm ngày học phù hợp"
+                  allowClear
+                  format="DD/MM/YYYY"
+                  value={filterDate}
+                  onChange={(val) => setFilterDate(val ?? null)}
+                  defaultPickerValue={defaultPickerValue}
+                  disabledDate={disabledDateFilter}
+                  inputReadOnly={!screens.md}
+                  style={{
+                    width: '100%',
+                    borderRadius: 20,
+                    border: `1px solid ${filterDate ? T.black : T.gray2}`,
+                    fontSize: 14,
+                  }}
+                  id="filter-session-date"
+                  popupStyle={{ zIndex: 1100 }}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -490,12 +646,16 @@ export default function CustomerSchedulePage() {
         ) : displaySessions.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-            <Text style={{ color: T.gray3, fontSize: 15 }}>Tháng này chưa có lớp học nào.</Text>
+            <Text style={{ color: T.gray3, fontSize: 15 }}>
+              {filterDate
+                ? `Không có lớp học nào vào ngày ${filterDate.format('DD/MM/YYYY')}.`
+                : 'Tháng này chưa có lớp học nào.'}
+            </Text>
           </div>
         ) : (
-          <Row gutter={[{ xs: 8, sm: 16 }, { xs: 12, sm: 16 }]}>
+          <Row gutter={[{ xs: 12, sm: 12, md: 16 }, { xs: 12, sm: 12, md: 16 }]}>
             {displaySessions.map((session) => (
-              <Col key={session._id} lg={6} md={8} sm={12} xs={12}>
+              <Col key={session._id} xs={24} sm={24} md={12} lg={8} xl={6}>
                 <SessionCard session={session} onRegister={setRegisterSession} />
               </Col>
             ))}
@@ -520,6 +680,35 @@ export default function CustomerSchedulePage() {
           0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); opacity: 1; }
           70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(52, 199, 89, 0); opacity: 0.8; }
           100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); opacity: 1; }
+        }
+
+        .session-card {
+          transition: all 0.3s ease !important;
+        }
+        .session-card-interactive {
+          cursor: pointer !important;
+        }
+        .session-card-interactive:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        }
+        .session-card-interactive:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+        }
+        .session-card-disabled {
+          cursor: default !important;
+        }
+
+        .btn-center-content {
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          gap: 8px !important;
+        }
+        .btn-center-content .ant-btn-icon {
+          margin: 0 !important;
+          margin-inline-end: 0 !important;
         }
       `}</style>
     </div>
