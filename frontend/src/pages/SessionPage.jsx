@@ -826,7 +826,7 @@ export default function SessionPage() {
       message.error('Vui lòng chọn ít nhất một ngày học.');
       return;
     }
-    const isoStudyDates = rawDates.map((d) => d.toISOString());
+    const formattedStudyDates = rawDates.map((d) => dayjs(d).format('YYYY-MM-DD'));
 
     setSubmitting(true);
     try {
@@ -836,7 +836,7 @@ export default function SessionPage() {
         classCode: values.classCode.trim().toUpperCase(),
         timeSlot: values.timeSlot.trim(),
         maxCapacity: values.maxCapacity,
-        studyDates: isoStudyDates,
+        studyDates: formattedStudyDates,
       };
 
       if (editTarget) {

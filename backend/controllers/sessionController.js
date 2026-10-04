@@ -113,10 +113,56 @@ const checkTimeOverlap = (timeSlot1, timeSlot2) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HELPER: parseDateInfo
+// Chuyển đổi an toàn giá trị ngày (chuỗi 'YYYY-MM-DD', ISO string hoặc Date)
+// thành thông tin ngày tháng năm và Date object tại UTC midnight để lưu trữ DB,
+// loại bỏ hoàn toàn sự dịch chuyển múi giờ.
+// ─────────────────────────────────────────────────────────────────────────────
+const parseDateInfo = (val) => {
+  if (!val) return null;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10);
+      const day = parseInt(match[3], 10);
+      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+      return {
+        year,
+        month,
+        day,
+        dateObj: new Date(Date.UTC(year, month - 1, day, 0, 0, 0)),
+        dateStr: `${match[1]}-${match[2]}-${match[3]}`,
+        displayStr: `${match[3]}/${match[2]}/${match[1]}`,
+      };
+    }
+  }
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return null;
+  // Fallback nếu client gửi Date object hoặc full ISO timestamp (offset +7 giờ cho giờ VN)
+  const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  const iso = vnTime.toISOString().slice(0, 10);
+  const [year, month, day] = iso.split('-').map(Number);
+  return {
+    year,
+    month,
+    day,
+    dateObj: new Date(Date.UTC(year, month - 1, day, 0, 0, 0)),
+    dateStr: iso,
+    displayStr: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HELPER: formatToLocalYYYYMMDD
 // Chuyển đổi an toàn sang YYYY-MM-DD theo múi giờ Việt Nam (UTC+7)
 // ─────────────────────────────────────────────────────────────────────────────
 const formatToLocalYYYYMMDD = (dateVal) => {
+  if (typeof dateVal === 'string') {
+    const match = dateVal.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
   const d = new Date(dateVal);
   // Cộng bù 7 tiếng (25,200,000 ms) để triệt tiêu việc .toISOString() lùi về UTC
   const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
@@ -268,26 +314,26 @@ const createSession = async (req, res) => {
     }
 
     const dates = Array.isArray(studyDates) ? studyDates : [studyDates];
-    const parsedDates = dates.map((d) => new Date(d));
+    const parsedInfos = dates.map(parseDateInfo);
 
-    if (parsedDates.some((d) => isNaN(d.getTime()))) {
+    if (parsedInfos.some((info) => !info)) {
       return res.status(400).json({ success: false, message: 'studyDates chứa giá trị ngày không hợp lệ.' });
     }
 
     // ── Validate tất cả studyDates phải thuộc campaignMonth ────────────────
     const [targetMonth, targetYear] = campaignMonth.split('/').map(Number);
-    const invalidDates = parsedDates.filter((d) => {
-      return d.getMonth() + 1 !== targetMonth || d.getFullYear() !== targetYear;
+    const invalidDates = parsedInfos.filter((info) => {
+      return info.month !== targetMonth || info.year !== targetYear;
     });
     if (invalidDates.length > 0) {
-      const formatted = invalidDates.map((d) =>
-        `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-      );
+      const formatted = invalidDates.map((info) => info.displayStr);
       return res.status(400).json({
         success: false,
         message: `Các ngày học sau không thuộc tháng ${campaignMonth}: ${formatted.join(', ')}.`,
       });
     }
+
+    const parsedDates = parsedInfos.map((info) => info.dateObj);
 
     // ── Validate và parse timeSlot ─────────────────────────────────────────
     const parsedSlot = parseTimeSlot(timeSlot);
@@ -419,26 +465,25 @@ const updateSession = async (req, res) => {
       let parsedDates;
       if (newStudyDates) {
         const arr = Array.isArray(newStudyDates) ? newStudyDates : [newStudyDates];
-        parsedDates = arr.map((d) => new Date(d));
-        if (parsedDates.some((d) => isNaN(d.getTime()))) {
+        const parsedInfos = arr.map(parseDateInfo);
+        if (parsedInfos.some((info) => !info)) {
           return res.status(400).json({ success: false, message: 'studyDates chứa giá trị ngày không hợp lệ.' });
         }
 
         // Validate tất cả ngày mới phải thuộc effectiveCampaignMonth
         const [tMonth, tYear] = effectiveCampaignMonth.split('/').map(Number);
-        const wrongDates = parsedDates.filter(
-          (d) => d.getMonth() + 1 !== tMonth || d.getFullYear() !== tYear
+        const wrongDates = parsedInfos.filter(
+          (info) => info.month !== tMonth || info.year !== tYear
         );
         if (wrongDates.length > 0) {
-          const formatted = wrongDates.map((d) =>
-            `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-          );
+          const formatted = wrongDates.map((info) => info.displayStr);
           return res.status(400).json({
             success: false,
             message: `Các ngày học sau không thuộc tháng ${effectiveCampaignMonth}: ${formatted.join(', ')}.`,
           });
         }
 
+        parsedDates = parsedInfos.map((info) => info.dateObj);
         updateFields.studyDates = parsedDates;
       } else {
         parsedDates = current.studyDates;
