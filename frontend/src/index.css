@@ -130,3 +130,108 @@ body,
 .mobile-month-pill:active {
   transform: scale(0.95);
 }
+
+
+/* ── Customer Schedule Page Animations & Card Styles ── */
+@keyframes statusPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 4px rgba(52, 199, 89, 0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 199, 89, 0);
+    opacity: 1;
+  }
+}
+
+.session-card {
+  transition: all 0.3s ease !important;
+}
+
+.session-card-interactive {
+  cursor: pointer !important;
+}
+
+.session-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.session-card-interactive:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+.session-card-disabled {
+  cursor: default !important;
+}
+
+.btn-center-content {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.btn-center-content .ant-btn-icon {
+  margin: 0 !important;
+  margin-inline-end: 0 !important;
+}
+
+/* ── Schedule Filter Bar Hover States (Minimalist Apple / Linear Style) ── */
+.schedule-course-tab:not(.active):hover {
+  color: #1D1D1F !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+}
+
+.schedule-month-tab:not(.active):hover {
+  color: #1D1D1F !important;
+  background: rgba(29, 29, 31, 0.025) !important;
+}
+
+/* ── Course Trigger & Course Modal Card Interactions ── */
+.course-trigger-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(29, 29, 31, 0.28) !important;
+  background: #2C2C2E !important;
+}
+
+.course-trigger-cta:active {
+  transform: translateY(0);
+}
+
+.course-trigger-selected:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(29, 29, 31, 0.12) !important;
+}
+
+.course-modal-card:hover {
+  border-color: #1D1D1F !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(29, 29, 31, 0.08) !important;
+}
+
+.course-modal-card:hover .course-modal-card-arrow {
+  background: #1D1D1F !important;
+  color: #FFFFFF !important;
+  transform: translateX(2px);
+}
+
+.empty-course-prompt:hover {
+  border-color: #AEAEB2 !important;
+  background: #F5F5F8 !important;
+}
+
+/* ── Clean Close Button Outline in Minimal Course Modal ── */
+.minimal-course-modal .ant-modal-close {
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 50% !important;
+}

@@ -63,9 +63,9 @@ export default function MainLayout() {
   };
 
   // Xác định menu item đang active dựa trên pathname hiện tại
-  const selectedKey = menuItems.find((item) =>
-    location.pathname.startsWith(item.key)
-  )?.key ?? '/admin/campaigns';
+  const selectedKey =
+    menuItems.find((item) => location.pathname.startsWith(item.key))?.key ??
+    '/admin/campaigns';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -125,10 +125,10 @@ export default function MainLayout() {
         placement="left"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        width={250}
         styles={{
           header: { display: 'none' },
           body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+          wrapper: { width: 250 },
         }}
       >
         <div
@@ -260,17 +260,16 @@ export default function MainLayout() {
           </div>
         </Header>
 
-        {/* Content: Giảm padding/margin trên mobile để tối ưu không gian */}
+        {/* Content */}
         <Content
           style={{
-            margin: screens.md ? 24 : (screens.sm ? 16 : 8),
+            margin: screens.md ? 24 : screens.sm ? 16 : 8,
             padding: screens.md ? 24 : 12,
             background: token.colorBgContainer,
             borderRadius: screens.md ? token.borderRadiusLG : 8,
             minHeight: 360,
           }}
         >
-          {/* Các trang con (Campaigns, Sessions, Settings) được render tại đây */}
           <Outlet />
         </Content>
 

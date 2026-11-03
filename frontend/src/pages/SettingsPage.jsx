@@ -1,8 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  Form, Input, Button, Typography, Card, Flex, App,
-  Divider,
-} from 'antd';
+import { useEffect, useState } from 'react';
+import { Form, Input, Button, Typography, Card, Flex, App, Divider } from 'antd';
 import {
   FacebookFilled, MessageOutlined, SaveOutlined, LinkOutlined,
 } from '@ant-design/icons';
@@ -11,37 +8,61 @@ import api from '../services/api';
 const { Title, Text, Paragraph } = Typography;
 
 const SETTING_KEY = 'contact_links';
+const SETTING_URL = `/settings/${SETTING_KEY}`;
 
 export default function SettingsPage() {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(true);
+  const [initialValues] = useState(() => {
+    const cached = api.getCached(SETTING_URL)?.data?.value;
+    return {
+      facebook: cached?.facebook ?? '',
+      zalo: cached?.zalo ?? '',
+    };
+  });
+  const [loading, setLoading] = useState(() => !api.getCached(SETTING_URL));
   const [saving, setSaving] = useState(false);
   const { message } = App.useApp();
 
-  // ── Fetch hiện tại ─────────────────────────────────────────────────────────
-  const fetchSetting = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get(`/settings/${SETTING_KEY}`);
-      const value = data.data?.value ?? {};
-      form.setFieldsValue({ facebook: value.facebook ?? '', zalo: value.zalo ?? '' });
-    } catch {
-      message.error('Không thể tải cấu hình. Vui lòng thử lại.');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    let ignore = false;
+    const hasCached = !!api.getCached(SETTING_URL);
+
+    api
+      .fetchCached(SETTING_URL)
+      .then((res) => {
+        if (ignore) return;
+        const value = res?.data?.value ?? {};
+        form.setFieldsValue({ facebook: value.facebook ?? '', zalo: value.zalo ?? '' });
+      })
+      .catch(() => {
+        if (!ignore && !hasCached) {
+          message.error('Không thể tải cấu hình. Vui lòng thử lại.');
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, [form, message]);
 
-  useEffect(() => { fetchSetting(); }, [fetchSetting]);
-
-  // ── Lưu ───────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     let values;
-    try { values = await form.validateFields(); } catch { return; }
+    try {
+      values = await form.validateFields();
+    } catch {
+      return;
+    }
+
     setSaving(true);
     try {
-      await api.put(`/settings/${SETTING_KEY}`, {
-        value: { facebook: values.facebook?.trim() ?? '', zalo: values.zalo?.trim() ?? '' },
+      await api.put(SETTING_URL, {
+        value: {
+          facebook: values.facebook?.trim() ?? '',
+          zalo: values.zalo?.trim() ?? '',
+        },
       });
       message.success('Đã lưu cấu hình liên hệ thành công!');
     } catch (err) {
@@ -53,10 +74,11 @@ export default function SettingsPage() {
 
   return (
     <>
-      {/* Header */}
       <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>Cấu hình hệ thống</Title>
+          <Title level={4} style={{ margin: 0 }}>
+            Cấu hình hệ thống
+          </Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
             Quản lý các thông tin liên hệ hiển thị cho khách hàng
           </Text>
@@ -73,18 +95,17 @@ export default function SettingsPage() {
         style={{ maxWidth: 600, borderRadius: 10 }}
       >
         <Paragraph type="secondary" style={{ marginBottom: 20, fontSize: 13 }}>
-          Các link này sẽ hiển thị trong trang lịch học công khai (
-          <Text code>/</Text>) khi khách hàng click{' '}
-          <strong>"Đăng ký ngay"</strong>. Để trống nếu chưa muốn hiển thị.
+          Các link này sẽ hiển thị trong trang lịch học công khai (<Text code>/</Text>) khi khách
+          hàng click <strong>"Đăng ký ngay"</strong>. Để trống nếu chưa muốn hiển thị.
         </Paragraph>
 
         <Form
           form={form}
           layout="vertical"
+          initialValues={initialValues}
           disabled={loading}
           requiredMark="optional"
         >
-          {/* Facebook */}
           <Form.Item
             name="facebook"
             label={
@@ -110,7 +131,6 @@ export default function SettingsPage() {
             />
           </Form.Item>
 
-          {/* Zalo */}
           <Form.Item
             name="zalo"
             label={

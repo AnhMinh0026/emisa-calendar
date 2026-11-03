@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Card, Form, Input, Button, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import api from '../services/api';
@@ -12,13 +12,11 @@ export default function LoginPage() {
   const location = useLocation();
   const { message } = App.useApp();
 
-  // Nếu đã đăng nhập trước đó, điều hướng thẳng tới trang quản trị
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-      navigate('/admin/campaigns', { replace: true });
-    }
-  }, [navigate]);
+  // Nếu đã đăng nhập trước đó, điều hướng thẳng tới trang quản trị (không cần useEffect)
+  const existingToken = localStorage.getItem('adminToken');
+  if (existingToken) {
+    return <Navigate to="/admin/campaigns" replace />;
+  }
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -60,7 +58,7 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: 400 }}>
         {/* Card đăng nhập phong cách Apple tối giản */}
         <Card
-          bordered={false}
+          variant="borderless"
           style={{
             borderRadius: 20,
             boxShadow: '0 8px 30px rgba(0, 0, 0, 0.06)',
@@ -70,7 +68,6 @@ export default function LoginPage() {
         >
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 28, marginTop: 10 }}>
-
             <Title
               level={3}
               style={{
