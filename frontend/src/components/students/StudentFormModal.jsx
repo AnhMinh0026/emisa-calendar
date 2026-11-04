@@ -4,7 +4,7 @@ import { UserOutlined, PhoneOutlined, DollarOutlined } from '@ant-design/icons';
 import ResponsiveModal from '../common/ResponsiveModal';
 import { moneyFormatter, moneyParser } from '../../utils/formatters';
 
-function StudentFormContent({ form, editTarget, sessionOptions }) {
+function StudentFormContent({ form, editTarget, defaultSessionId, sessionOptions }) {
   const screens = Grid.useBreakpoint();
 
   const initialValues = useMemo(
@@ -20,12 +20,13 @@ function StudentFormContent({ form, editTarget, sessionOptions }) {
             paymentNote: editTarget.paymentNote ?? '',
           }
         : {
+            sessionId: defaultSessionId ?? undefined,
             depositAmount: 0,
             remainingAmount: 0,
             isFullyPaid: false,
             paymentNote: '',
           },
-    [editTarget]
+    [editTarget, defaultSessionId]
   );
 
   // Tự động gán Còn nợ = 0 và cộng dồn vào Tiền cọc khi bật 'Đã đóng xong' = true
@@ -42,7 +43,7 @@ function StudentFormContent({ form, editTarget, sessionOptions }) {
 
   return (
     <Form
-      key={editTarget?._id || 'create'}
+      key={editTarget?._id || defaultSessionId || 'create'}
       form={form}
       layout="vertical"
       initialValues={initialValues}
@@ -160,6 +161,7 @@ function StudentFormContent({ form, editTarget, sessionOptions }) {
 export default function StudentFormModal({
   open,
   editTarget,
+  defaultSessionId,
   sessionOptions,
   submitting,
   onClose,
@@ -200,6 +202,7 @@ export default function StudentFormModal({
       <StudentFormContent
         form={form}
         editTarget={editTarget}
+        defaultSessionId={defaultSessionId}
         sessionOptions={sessionOptions}
       />
     </ResponsiveModal>
