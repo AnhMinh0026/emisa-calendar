@@ -87,6 +87,7 @@ export const groupSessionsByCampaign = (sessions) => {
 export const groupPublicSessions = (sessions) => {
   const groups = {};
   sessions.forEach((s) => {
+    if (s.isHidden || s.campaignId?.isHidden) return;
     const c = s.campaignId;
     if (!c?._id) return;
     const cId = c._id;

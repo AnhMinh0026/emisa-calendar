@@ -1,14 +1,18 @@
 import { useMemo } from 'react';
-import { Form, Input, InputNumber, Select, DatePicker, Flex, Grid, App } from 'antd';
+import { Form, Input, InputNumber, Select, DatePicker, Flex, Grid, Switch, Typography, App } from 'antd';
 import dayjs from 'dayjs';
 import ResponsiveModal from '../common/ResponsiveModal';
 import { buildDisabledDate } from '../../utils/formatters';
+
+const { Text } = Typography;
 
 function SessionFormContent({ form, editTarget, campaigns }) {
   const screens = Grid.useBreakpoint();
 
   const initialValues = useMemo(() => {
-    if (!editTarget) return {};
+    if (!editTarget) {
+      return { isPublicVisible: true };
+    }
     return {
       campaignId: editTarget.campaignId?._id ?? editTarget.campaignId,
       campaignMonth: editTarget.campaignMonth,
@@ -16,6 +20,7 @@ function SessionFormContent({ form, editTarget, campaigns }) {
       timeSlot: editTarget.timeSlot,
       maxCapacity: editTarget.maxCapacity,
       studyDates: (editTarget.studyDates ?? []).map((d) => dayjs(d)),
+      isPublicVisible: !editTarget.isHidden,
     };
   }, [editTarget]);
 
@@ -85,7 +90,7 @@ function SessionFormContent({ form, editTarget, campaigns }) {
           rules={[{ required: true, message: 'Nhập mã lớp.' }]}
         >
           <Input
-            placeholder="VD: K02"
+            placeholder="VD: K02, ÔN-01"
             maxLength={20}
             style={{ textTransform: 'uppercase' }}
             id="input-class-code"
@@ -154,6 +159,34 @@ function SessionFormContent({ form, editTarget, campaigns }) {
           allowClear
         />
       </Form.Item>
+
+      <div
+        style={{
+          background: '#fafafa',
+          border: '1px solid #f0f0f0',
+          borderRadius: 8,
+          padding: '10px 14px',
+          marginTop: 4,
+        }}
+      >
+        <Flex justify="space-between" align="center" gap={12}>
+          <div>
+            <Text strong style={{ display: 'block', fontSize: 13.5 }}>
+              Hiển thị trên trang lịch học Public
+            </Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Tắt nếu đây là lớp nội bộ / lớp ôn tập không muốn khách ngoài nhìn thấy
+            </Text>
+          </div>
+          <Form.Item name="isPublicVisible" valuePropName="checked" noStyle>
+            <Switch
+              checkedChildren="Hiện"
+              unCheckedChildren="Ẩn"
+              id="switch-session-public"
+            />
+          </Form.Item>
+        </Flex>
+      </div>
     </Form>
   );
 }
@@ -195,6 +228,7 @@ export default function SessionFormModal({
       timeSlot: values.timeSlot.trim(),
       maxCapacity: values.maxCapacity,
       studyDates: rawDates.map((d) => dayjs(d).format('YYYY-MM-DD')),
+      isHidden: !values.isPublicVisible,
     });
   };
 

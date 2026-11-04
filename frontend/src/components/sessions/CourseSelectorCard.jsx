@@ -222,7 +222,7 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
                         >
                           {camp.title}
                         </Text>
-                        {camp.isActive === false && (
+                        {camp.isHidden && (
                           <span
                             style={{
                               fontSize: 11,

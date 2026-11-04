@@ -10,7 +10,6 @@ import {
 } from "antd";
 import {
   FacebookFilled,
-  MessageOutlined,
   CopyOutlined,
   CheckOutlined,
 } from "@ant-design/icons";
@@ -21,7 +20,7 @@ const { Text } = Typography;
 
 /**
  * Modal hiển thị chi tiết ca học & hỗ trợ sao chép thông tin nhanh để gửi qua Facebook / Zalo
- * Thiết kế Minimalist, gọn gàng trên 1 dòng, không rớt dòng gây rối mắt trên cả Web & Mobile
+ * Thiết kế Minimalist, hiển thị đầy đủ thông tin ngày học rõ ràng trên cả Web & Mobile
  */
 const ContactModal = memo(function ContactModal({
   open,
@@ -145,7 +144,7 @@ const ContactModal = memo(function ContactModal({
               marginBottom: 18,
             }}
           >
-            {/* Dòng tiêu đề thẻ: Khóa học + Mã lớp & Trạng thái chỗ trống */}
+            {/* Dòng tiêu đề thẻ: Mã lớp + Khóa học & Trạng thái chỗ trống */}
             <Flex
               justify="space-between"
               align="center"
@@ -203,50 +202,66 @@ const ContactModal = memo(function ContactModal({
               )}
             </Flex>
 
-            {/* Chi tiết lịch học: Hiển thị gọn từng dòng, không lặp năm gây rớt dòng */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {/* Chi tiết lịch học: Tách tiêu đề & thông tin rõ ràng để hiển thị trọn vẹn 100% trên 1 dòng */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {/* Giờ học */}
-              <Flex justify="space-between" align="center" gap={12}>
-                <Text style={{ color: T.gray3, fontSize: 13, flexShrink: 0 }}>
+              <div>
+                <Text
+                  style={{
+                    display: "block",
+                    color: T.gray3,
+                    fontSize: 12,
+                    marginBottom: 2,
+                  }}
+                >
                   Giờ học
                 </Text>
                 <Text
                   strong
                   style={{
                     color: T.black,
-                    fontSize: isMobile ? 13.5 : 14,
-                    whiteSpace: "nowrap",
+                    fontSize: isMobile ? 14 : 14.5,
+                    letterSpacing: -0.2,
                   }}
                 >
                   {session.timeSlot}
                 </Text>
-              </Flex>
+              </div>
 
-              {/* Ngày học */}
-              <Flex justify="space-between" align="center" gap={12}>
-                <Text style={{ color: T.gray3, fontSize: 13, flexShrink: 0 }}>
-                  Ngày học
-                </Text>
+              {/* Ngày học: Tiêu đề ở trên (kèm tháng/năm), danh sách ngày trải rộng bên dưới không bao giờ bị cắt '...' */}
+              <div>
+                <Flex
+                  justify="space-between"
+                  align="center"
+                  style={{ marginBottom: 3 }}
+                >
+                  <Text style={{ color: T.gray3, fontSize: 12 }}>
+                    Ngày học
+                  </Text>
+                  {session.campaignMonth && (
+                    <Text style={{ color: T.gray3, fontSize: 12 }}>
+                      Tháng {session.campaignMonth}
+                    </Text>
+                  )}
+                </Flex>
                 <div
                   style={{
-                    textAlign: "right",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    fontSize: isMobile ? 13 : 13.5,
+                    fontSize: isMobile ? 14 : 14.5,
                     fontWeight: 600,
                     color: T.black,
+                    lineHeight: 1.5,
+                    wordBreak: "keep-all",
                   }}
                 >
                   {sortedDates.map((d, index) => (
-                    <span key={d}>
+                    <span key={d} style={{ whiteSpace: "nowrap" }}>
                       {dayjs(d).format("DD/MM")}
                       {index < sortedDates.length - 1 && (
                         <span
                           style={{
                             color: "#C7C7CC",
                             fontWeight: 400,
-                            margin: "0 5px",
+                            margin: isMobile ? "0 6px" : "0 8px",
                           }}
                         >
                           ·
@@ -254,23 +269,8 @@ const ContactModal = memo(function ContactModal({
                       )}
                     </span>
                   ))}
-                  {session.campaignMonth && (
-                    <span
-                      style={{
-                        color: T.gray3,
-                        fontWeight: 400,
-                        fontSize: 12,
-                        marginLeft: 5,
-                      }}
-                    >
-                      (
-                      {session.campaignMonth.split("/")[1] ||
-                        session.campaignMonth}
-                      )
-                    </span>
-                  )}
                 </div>
-              </Flex>
+              </div>
             </div>
 
             {/* Nút sao chép thông tin để dán vào khung chat */}
@@ -340,7 +340,20 @@ const ContactModal = memo(function ContactModal({
 
           <Button
             type="primary"
-            icon={<MessageOutlined style={{ fontSize: 15 }} />}
+            icon={
+              <img
+                src="/icons8-zalo-48.png"
+                alt="Zalo"
+                style={{
+                  width: 18,
+                  height: 18,
+                  objectFit: "contain",
+                  display: "block",
+                  opacity: hasZalo ? 1 : 0.45,
+                  filter: hasZalo ? "none" : "grayscale(100%)",
+                }}
+              />
+            }
             href={hasZalo ? contactLinks.zalo : undefined}
             target="_blank"
             rel="noopener noreferrer"

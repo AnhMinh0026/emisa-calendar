@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Table, Button, Input, Select, Space, Tag, Popconfirm, App,
-  Typography, Tooltip, Tabs, Empty, Card, Col, Grid,
+  Typography, Tooltip, Tabs, Empty, Card, Col, Grid, Switch,
 } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -32,6 +32,7 @@ export default function SessionPage() {
   );
   const [loading, setLoading] = useState(() => !api.getCached('/sessions'));
   const [submitting, setSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -129,11 +130,11 @@ export default function SessionPage() {
   const campaignIds = useMemo(() => Object.keys(groupedData), [groupedData]);
 
   const activeCampaignId = useMemo(() => {
-    if (chosenCampaignId && campaignIds.includes(chosenCampaignId)) {
+    if (chosenCampaignId && (campaignIds.includes(chosenCampaignId) || campaigns.some((c) => c._id === chosenCampaignId))) {
       return chosenCampaignId;
     }
-    return campaignIds[0] ?? null;
-  }, [chosenCampaignId, campaignIds]);
+    return campaignIds[0] ?? campaigns[0]?._id ?? null;
+  }, [chosenCampaignId, campaignIds, campaigns]);
 
   // ── CRUD Handlers ──────────────────────────────────────────────────────────
   const openCreate = useCallback(() => {
@@ -165,10 +166,14 @@ export default function SessionPage() {
           await loadData(true);
         }
       } else {
-        await api.post('/sessions', payload);
+        const { data } = await api.post('/sessions', payload);
         message.success(`Đã tạo lớp học "${payload.classCode}".`);
-        const res = await api.fetchCached('/sessions', { force: true });
-        if (res?.data) setSessions(res.data);
+        if (data?.data?._id) {
+          setSessions((prev) => [data.data, ...prev]);
+        } else {
+          const res = await api.fetchCached('/sessions', { force: true });
+          if (res?.data) setSessions(res.data);
+        }
       }
       closeModal();
     } catch (err) {
@@ -181,6 +186,37 @@ export default function SessionPage() {
       setSubmitting(false);
     }
   };
+
+  const handleToggleHidden = useCallback(
+    async (record) => {
+      const newHidden = !record.isHidden;
+      setTogglingId(record._id);
+      try {
+        const { data } = await api.put(`/sessions/${record._id}`, { isHidden: newHidden });
+        message.success(
+          newHidden
+            ? `Đã ẩn lớp "${record.classCode}" khỏi trang lịch học công khai.`
+            : `Đã hiển thị công khai lớp "${record.classCode}".`
+        );
+        setSessions((prev) =>
+          prev.map((s) =>
+            s._id === record._id
+              ? data?.data?._id
+                ? data.data
+                : { ...s, isHidden: newHidden }
+              : s
+          )
+        );
+      } catch (err) {
+        message.error(
+          err.response?.data?.message || err.message || 'Không thể cập nhật trạng thái hiển thị.'
+        );
+      } finally {
+        setTogglingId(null);
+      }
+    },
+    [message]
+  );
 
   const handleDelete = useCallback(
     async (record) => {
@@ -207,7 +243,7 @@ export default function SessionPage() {
         title: 'Mã lớp',
         dataIndex: 'classCode',
         key: 'classCode',
-        width: 100,
+        width: 110,
         sorter: (a, b) => a.classCode.localeCompare(b.classCode),
         defaultSortOrder: 'ascend',
         render: (val) => (
@@ -220,7 +256,7 @@ export default function SessionPage() {
         title: 'Khung giờ',
         dataIndex: 'timeSlot',
         key: 'timeSlot',
-        width: 180,
+        width: 170,
         render: (val) => (
           <Tag color="blue" style={{ fontWeight: 600, fontSize: 12 }}>
             {val}
@@ -280,6 +316,33 @@ export default function SessionPage() {
         render: (val) => <SessionStatusTag status={val} />,
       },
       {
+        title: 'Hiển thị',
+        dataIndex: 'isHidden',
+        key: 'isHidden',
+        width: 105,
+        align: 'center',
+        render: (_, record) => (
+          <Tooltip
+            title={
+              !record.isHidden
+                ? 'Đang hiển thị trên lịch học Public (Click để ẩn)'
+                : 'Đang ẩn khỏi lịch học Public (Click để hiện)'
+            }
+          >
+            <Switch
+              checked={!record.isHidden}
+              loading={togglingId === record._id}
+              onChange={() => handleToggleHidden(record)}
+              checkedChildren="Hiện"
+              unCheckedChildren="Ẩn"
+              style={{
+                backgroundColor: !record.isHidden ? '#34C759' : undefined,
+              }}
+            />
+          </Tooltip>
+        ),
+      },
+      {
         title: 'Thao tác',
         key: 'actions',
         width: 120,
@@ -326,7 +389,7 @@ export default function SessionPage() {
         ),
       },
     ],
-    [openDetail, openEdit, handleDelete]
+    [togglingId, handleToggleHidden, openDetail, openEdit, handleDelete]
   );
 
   // ── Dữ liệu Tháng & Lớp học theo Campaign đang chọn ────────────────────────
@@ -499,6 +562,8 @@ export default function SessionPage() {
           selectedMonthKey={selectedMobileMonthKey}
           onSelectMonth={setActiveMobileMonth}
           sessions={activeMobileSessions}
+          togglingId={togglingId}
+          onToggleHidden={handleToggleHidden}
           onDetail={openDetail}
           onEdit={openEdit}
           onDelete={handleDelete}

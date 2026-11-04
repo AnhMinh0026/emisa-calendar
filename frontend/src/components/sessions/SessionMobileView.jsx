@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Card, Flex, Space, Button, Popconfirm, Typography, Tag, Empty } from 'antd';
+import { Card, Flex, Space, Button, Popconfirm, Typography, Tag, Empty, Switch } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ClassCodeTag, SessionStatusTag } from '../common/StatusTags';
@@ -8,6 +8,8 @@ const { Text } = Typography;
 
 const MobileSessionCard = memo(function MobileSessionCard({
   session,
+  togglingId,
+  onToggleHidden,
   onDetail,
   onEdit,
   onDelete,
@@ -21,12 +23,30 @@ const MobileSessionCard = memo(function MobileSessionCard({
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
         border: '1px solid #f0f0f0',
         marginBottom: 10,
+        opacity: session.isHidden ? 0.85 : 1,
       }}
     >
-      {/* Header: Mã lớp & Nhóm Icon Thao tác */}
+      {/* Header: Mã lớp & Nhóm Icon Thao tác + Switch Ẩn/Hiện */}
       <Flex justify="space-between" align="center" style={{ marginBottom: 10 }}>
-        <ClassCodeTag code={session.classCode} fontSize={13} />
-        <Space size={2}>
+        <Flex align="center" gap={6}>
+          <ClassCodeTag code={session.classCode} fontSize={13} />
+          {session.isHidden && (
+            <Tag style={{ margin: 0, fontSize: 11, color: '#8c8c8c' }}>Đang ẩn</Tag>
+          )}
+        </Flex>
+        <Space size={4} align="center">
+          <Switch
+            size="small"
+            checked={!session.isHidden}
+            loading={togglingId === session._id}
+            onChange={() => onToggleHidden?.(session)}
+            checkedChildren="Hiện"
+            unCheckedChildren="Ẩn"
+            style={{
+              backgroundColor: !session.isHidden ? '#34C759' : undefined,
+              marginRight: 2,
+            }}
+          />
           <Button
             type="text"
             size="small"
@@ -153,6 +173,8 @@ export default function SessionMobileView({
   selectedMonthKey,
   onSelectMonth,
   sessions,
+  togglingId,
+  onToggleHidden,
   onDetail,
   onEdit,
   onDelete,
@@ -221,6 +243,8 @@ export default function SessionMobileView({
             <MobileSessionCard
               key={session._id}
               session={session}
+              togglingId={togglingId}
+              onToggleHidden={onToggleHidden}
               onDetail={onDetail}
               onEdit={onEdit}
               onDelete={onDelete}
@@ -231,4 +255,3 @@ export default function SessionMobileView({
     </div>
   );
 }
-

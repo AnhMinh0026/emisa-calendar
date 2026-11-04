@@ -1,32 +1,32 @@
-import { memo } from 'react';
-import { DatePicker, Grid } from 'antd';
-import { T } from '../../constants';
+import { memo } from "react";
+import { DatePicker, Grid } from "antd";
+import { T } from "../../constants";
 
 /**
  * Tab chọn Tháng (Tầng 2): Thiết kế Minimalist Underline Tab gọn gàng, không lặp icon gây rối mắt
  */
 const MonthTab = memo(function MonthTab({ monthKey, active, onClick, id }) {
-  const parts = String(monthKey).split('/');
+  const parts = String(monthKey).split("/");
   const mm = parts[0] || monthKey;
-  const yyyy = parts[1] || '';
+  const yyyy = parts[1] || "";
 
   return (
     <div
       id={id}
       onClick={onClick}
-      className={`schedule-month-tab ${active ? 'active' : ''}`}
+      className={`schedule-month-tab ${active ? "active" : ""}`}
       style={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'baseline',
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "baseline",
         gap: 3,
-        padding: '10px 18px 12px',
-        cursor: 'pointer',
+        padding: "10px 18px 12px",
+        cursor: "pointer",
         flexShrink: 0,
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
+        whiteSpace: "nowrap",
+        userSelect: "none",
         color: active ? T.black : T.gray3,
-        transition: 'color 0.2s ease',
+        transition: "color 0.2s ease",
       }}
     >
       <span
@@ -43,7 +43,7 @@ const MonthTab = memo(function MonthTab({ monthKey, active, onClick, id }) {
           style={{
             fontSize: 12,
             fontWeight: 400,
-            color: active ? '#6E6E73' : T.gray4,
+            color: active ? "#6E6E73" : T.gray4,
           }}
         >
           /{yyyy}
@@ -53,14 +53,14 @@ const MonthTab = memo(function MonthTab({ monthKey, active, onClick, id }) {
       {/* Thanh gạch chân điểm nhấn khi active */}
       <span
         style={{
-          position: 'absolute',
+          position: "absolute",
           bottom: -1,
-          left: active ? 14 : '50%',
-          right: active ? 14 : '50%',
+          left: active ? 14 : "50%",
+          right: active ? 14 : "50%",
           height: 2,
           borderRadius: 2,
-          background: active ? T.black : 'transparent',
-          transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: active ? T.black : "transparent",
+          transition: "all 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       />
     </div>
@@ -91,12 +91,12 @@ export default function ScheduleFilterBar({
       {/* Sticky Filter Bar */}
       <div
         style={{
-          position: 'sticky',
+          position: "sticky",
           top: 0,
           zIndex: 10,
           background: `${T.white}f2`,
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
           paddingTop: 22,
           paddingBottom: activeCampaign ? 0 : 12,
           marginBottom: 18,
@@ -105,10 +105,10 @@ export default function ScheduleFilterBar({
         {/* Tầng 1: Nút Khóa học căn giữa màn hình */}
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
             marginBottom: activeCampaign && monthList.length > 0 ? 14 : 6,
           }}
         >
@@ -119,21 +119,21 @@ export default function ScheduleFilterBar({
               onClick={onOpenCourseModal}
               className="course-trigger-selected"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
+                display: "inline-flex",
+                alignItems: "center",
                 gap: 12,
-                padding: '7px 8px 7px 16px',
+                padding: "7px 8px 7px 16px",
                 borderRadius: 999,
                 background: T.white,
                 border: `1.5px solid ${T.black}`,
-                boxShadow: '0 6px 20px rgba(29, 29, 31, 0.08)',
-                cursor: 'pointer',
-                userSelect: 'none',
-                maxWidth: '100%',
-                transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: "0 6px 20px rgba(29, 29, 31, 0.08)",
+                cursor: "pointer",
+                userSelect: "none",
+                maxWidth: "100%",
+                transition: "all 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
-              <span
+              {/* <span
                 style={{
                   width: 8,
                   height: 8,
@@ -154,16 +154,16 @@ export default function ScheduleFilterBar({
                 }}
               >
                 Khóa học:
-              </span>
+              </span> */}
               <span
                 style={{
                   fontSize: 14.5,
                   fontWeight: 700,
                   color: T.black,
                   letterSpacing: -0.2,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
                 {activeCampaign.title}
@@ -171,16 +171,16 @@ export default function ScheduleFilterBar({
 
               <span
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '5px 12px',
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "5px 12px",
                   borderRadius: 999,
-                  background: '#F2F2F7',
+                  background: "#F2F2F7",
                   color: T.black,
                   fontSize: 12,
                   fontWeight: 600,
                   flexShrink: 0,
-                  transition: 'background 0.2s ease',
+                  transition: "background 0.2s ease",
                 }}
               >
                 Đổi khóa học
@@ -194,20 +194,20 @@ export default function ScheduleFilterBar({
               onClick={onOpenCourseModal}
               className="course-trigger-cta"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
+                display: "inline-flex",
+                alignItems: "center",
                 gap: 10,
-                padding: '12px 26px',
+                padding: "12px 26px",
                 borderRadius: 999,
                 background: T.black,
                 color: T.white,
-                border: 'none',
+                border: "none",
                 fontSize: 15,
                 fontWeight: 600,
                 letterSpacing: -0.2,
-                cursor: 'pointer',
-                boxShadow: '0 10px 28px rgba(29, 29, 31, 0.2)',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: "pointer",
+                boxShadow: "0 10px 28px rgba(29, 29, 31, 0.2)",
+                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
               <span>Chọn khóa học phù hợp</span>
@@ -216,10 +216,10 @@ export default function ScheduleFilterBar({
                   style={{
                     fontSize: 11.5,
                     fontWeight: 600,
-                    padding: '2px 8px',
+                    padding: "2px 8px",
                     borderRadius: 999,
-                    background: 'rgba(255, 255, 255, 0.14)',
-                    color: '#E5E5EA',
+                    background: "rgba(255, 255, 255, 0.14)",
+                    color: "#E5E5EA",
                   }}
                 >
                   {campaignCount} khóa
@@ -233,14 +233,14 @@ export default function ScheduleFilterBar({
         {activeCampaign && monthList.length > 0 && (
           <div
             style={{
-              display: 'flex',
-              justifyContent: screens.md ? 'center' : 'flex-start',
+              display: "flex",
+              justifyContent: screens.md ? "center" : "flex-start",
               gap: 4,
-              overflowX: 'auto',
+              overflowX: "auto",
               borderBottom: `1px solid ${T.gray2}`,
               paddingBottom: 1,
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
             }}
           >
             {monthList.map((mk) => (
@@ -260,24 +260,24 @@ export default function ScheduleFilterBar({
       {!loading && activeCampaign && (
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
             gap: 12,
-            width: '100%',
+            width: "100%",
             marginBottom: 18,
           }}
         >
           <div
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
+              display: "inline-flex",
+              alignItems: "center",
               gap: 6,
-              background: '#F5F5F7',
-              padding: '5px 12px',
+              background: "#F5F5F7",
+              padding: "5px 12px",
               borderRadius: 8,
-              border: '1px solid rgba(0, 0, 0, 0.04)',
+              border: "1px solid rgba(0, 0, 0, 0.04)",
             }}
           >
             <span
@@ -293,7 +293,7 @@ export default function ScheduleFilterBar({
           </div>
 
           {activeMonth && (
-            <div style={{ flex: screens.md ? '0 1 280px' : 1, minWidth: 200 }}>
+            <div style={{ flex: screens.md ? "0 1 280px" : 1, minWidth: 200 }}>
               <DatePicker
                 key={activeMonth}
                 placeholder="Tìm ngày học phù hợp"
@@ -305,7 +305,7 @@ export default function ScheduleFilterBar({
                 disabledDate={disabledDateFilter}
                 inputReadOnly={!screens.md}
                 style={{
-                  width: '100%',
+                  width: "100%",
                   borderRadius: 10,
                   border: `1px solid ${filterDate ? T.black : T.gray2}`,
                   fontSize: 13.5,

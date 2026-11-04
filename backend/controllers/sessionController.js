@@ -7,8 +7,6 @@ const AuditLog = require('../models/AuditLog');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: resolveAdminId
-// Trả về ObjectId hợp lệ từ body, hoặc tạo mock ObjectId.
-// TODO: Thay bằng req.user._id khi JWT Auth middleware hoàn thiện.
 // ─────────────────────────────────────────────────────────────────────────────
 const resolveAdminId = (rawId) =>
   rawId && mongoose.Types.ObjectId.isValid(rawId)
@@ -38,12 +36,6 @@ const handleServerError = (res, fn, error) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: parseTime
-//
-// Chuyển đổi chuỗi 'HH:mm' thành tổng số phút từ đầu ngày.
-// Ví dụ: '07:30' → 450  |  '18:00' → 1080  |  '09:00' → 540
-//
-// @param   {string} timeStr  Chuỗi thời gian định dạng 'HH:mm'
-// @returns {number}          Tổng số phút, hoặc -1 nếu không hợp lệ
 // ─────────────────────────────────────────────────────────────────────────────
 const parseTime = (timeStr) => {
   if (typeof timeStr !== 'string') return -1;
@@ -57,9 +49,6 @@ const parseTime = (timeStr) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: parseTimeSlot
-//
-// Tách timeSlot 'HH:mm - HH:mm' thành { start, end } (phút).
-// @returns {{ start: number, end: number } | null}  null nếu định dạng sai
 // ─────────────────────────────────────────────────────────────────────────────
 const parseTimeSlot = (timeSlot) => {
   const parts = timeSlot.split('-').map((s) => s.trim());
@@ -71,52 +60,17 @@ const parseTimeSlot = (timeSlot) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: hasTimeConflict
-//
-// Kiểm tra xem hai khung giờ có xung đột (kể cả buffer 30 phút) không.
-//
-// QUY TẮC (1 giáo viên, buffer = 30 phút):
-//   Ca mới HỢP LỆ khi và chỉ khi:
-//     startNew >= endOld + BUFFER  (ca mới bắt đầu sau khi ca cũ xong + 30p)
-//     OR
-//     endNew   <= startOld - BUFFER (ca mới kết thúc trước khi ca cũ bắt đầu - 30p)
-//
-// @returns {boolean} true nếu có xung đột
-// ─────────────────────────────────────────────────────────────────────────────
-const BUFFER_MINUTES = 30;
-
-const hasTimeConflict = (startNew, endNew, startOld, endOld) => {
-  const isValid =
-    startNew >= endOld + BUFFER_MINUTES ||
-    endNew <= startOld - BUFFER_MINUTES;
-  return !isValid;
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // HELPER: checkTimeOverlap
-//
-// Kiểm tra hai khung giờ có GIÀO NHAU không (không buffer).
-// Công thức chuẩn: start1 < end2 && start2 < end1
-//
-// Đầu vào là chuỗi timeSlot 'HH:mm - HH:mm', cover trường hợp dư khoảng trắng.
-// @param {string} timeSlot1 - VD: '18:00 - 20:30'
-// @param {string} timeSlot2 - VD: '20:00 - 22:00'
-// @returns {boolean}        true nếu hai khung giờ giao nhau
 // ─────────────────────────────────────────────────────────────────────────────
 const checkTimeOverlap = (timeSlot1, timeSlot2) => {
   const slot1 = parseTimeSlot(timeSlot1);
   const slot2 = parseTimeSlot(timeSlot2);
-  // Nếu không parse được → không thể xác định → coi là không giao (bỏ qua)
   if (!slot1 || !slot2) return false;
-  // Giao nhau khi và chỉ khi: start1 < end2 và start2 < end1
   return slot1.start < slot2.end && slot2.start < slot1.end;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: parseDateInfo
-// Chuyển đổi an toàn giá trị ngày (chuỗi 'YYYY-MM-DD', ISO string hoặc Date)
-// thành thông tin ngày tháng năm và Date object tại UTC midnight để lưu trữ DB,
-// loại bỏ hoàn toàn sự dịch chuyển múi giờ.
 // ─────────────────────────────────────────────────────────────────────────────
 const parseDateInfo = (val) => {
   if (!val) return null;
@@ -140,7 +94,6 @@ const parseDateInfo = (val) => {
   }
   const d = new Date(val);
   if (isNaN(d.getTime())) return null;
-  // Fallback nếu client gửi Date object hoặc full ISO timestamp (offset +7 giờ cho giờ VN)
   const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
   const iso = vnTime.toISOString().slice(0, 10);
   const [year, month, day] = iso.split('-').map(Number);
@@ -156,7 +109,6 @@ const parseDateInfo = (val) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: formatToLocalYYYYMMDD
-// Chuyển đổi an toàn sang YYYY-MM-DD theo múi giờ Việt Nam (UTC+7)
 // ─────────────────────────────────────────────────────────────────────────────
 const formatToLocalYYYYMMDD = (dateVal) => {
   if (typeof dateVal === 'string') {
@@ -164,46 +116,33 @@ const formatToLocalYYYYMMDD = (dateVal) => {
     if (match) return match[1];
   }
   const d = new Date(dateVal);
-  // Cộng bù 7 tiếng (25,200,000 ms) để triệt tiêu việc .toISOString() lùi về UTC
   const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
   return vnTime.toISOString().slice(0, 10);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: checkScheduleConflict
-// Kiểm tra xung đột lịch TOÀN HỆ THỐNG và trả về thông báo chi tiết.
-// Đã xử lý triệt để lỗi Timezone (UTC+7).
 // ─────────────────────────────────────────────────────────────────────────────
 const checkScheduleConflict = async (parsedDates, timeSlot, excludeId = null) => {
-  // 1. Chuẩn hóa ngày mới (đã triệt tiêu lệch múi giờ)
   const newDateStrings = parsedDates.map(formatToLocalYYYYMMDD);
 
-  // 2. Kéo toàn bộ dữ liệu lớp học lên (loại trừ lớp đang sửa nếu có)
   const query = excludeId ? { _id: { $ne: excludeId } } : {};
   const allSessions = await ClassSession.find(query)
     .populate('campaignId', 'title')
     .select('classCode timeSlot studyDates campaignId')
     .lean();
 
-  // 3. Quét vòng lặp kiểm tra
   for (const session of allSessions) {
-    // Ưu tiên check trùng khung giờ trước
     if (checkTimeOverlap(timeSlot, session.timeSlot)) {
-      // Chuẩn hóa ngày trong DB với cùng offset +7
       const existingDateStrings = (session.studyDates || []).map(formatToLocalYYYYMMDD);
-
-      // Tìm các ngày thực sự giao nhau
       const overlappedDates = newDateStrings.filter((ds) => existingDateStrings.includes(ds));
 
-      // Nếu có ít nhất 1 ngày trùng -> Chặn ngay lập tức
       if (overlappedDates.length > 0) {
-        // Format lại ngày để hiển thị thông báo lỗi (DD/MM/YYYY)
         const fmtDate = (iso) => {
           const [y, m, d] = iso.split('-');
           return `${d}/${m}/${y}`;
         };
         const overlappedFormatted = overlappedDates.map(fmtDate).join(', ');
-
         const campaignTitle = session.campaignId?.title || '(Khóa học không xác định)';
         const errorMsg = `Trùng lịch với Lớp ${session.classCode} (${campaignTitle}) vào các ngày: ${overlappedFormatted} (Khung giờ: ${session.timeSlot}).`;
 
@@ -221,7 +160,6 @@ const checkScheduleConflict = async (parsedDates, timeSlot, excludeId = null) =>
     }
   }
 
-  // Chạy hết vòng lặp mà không vướng ai -> Hợp lệ
   return null;
 };
 
@@ -231,7 +169,6 @@ const checkScheduleConflict = async (parsedDates, timeSlot, excludeId = null) =>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // getAllSessions — GET /api/sessions
-// Lấy toàn bộ lớp học, populate thông tin Campaign.
 // ─────────────────────────────────────────────────────────────────────────────
 const getAllSessions = async (req, res) => {
   try {
@@ -247,17 +184,21 @@ const getAllSessions = async (req, res) => {
           $and: [
             { campaignId },
             { campaignId: { $in: activeCampaignIds } },
+            { isHidden: { $ne: true } },
           ],
         };
       } else {
-        filter = { campaignId: { $in: activeCampaignIds } };
+        filter = {
+          campaignId: { $in: activeCampaignIds },
+          isHidden: { $ne: true },
+        };
       }
     } else if (campaignId) {
       filter = { campaignId };
     }
 
     const sessions = await ClassSession.find(filter)
-      .populate('campaignId', 'title months description isHidden') // Populate Campaign (months thay month)
+      .populate('campaignId', 'title months description isHidden')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -273,19 +214,19 @@ const getAllSessions = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // createSession — POST /api/sessions
-// Tạo một lớp học mới thuộc một CourseCampaign.
-//
-// LOGIC CHỐNG TRÙNG LỊCH NÂNG CAO (SRS 4.1 — 1 giáo viên, buffer 30 phút):
-//   Bước 1: Query DB lấy tất cả ca đã có bất kỳ ngày trùng với studyDates mới.
-//   Bước 2: Với từng ca tìm được, parse timeSlot ra phút rồi chạy thuật toán:
-//     Ca mới hợp lệ khi: startNew >= endOld + 30  OR  endNew <= startOld - 30
-//   Nếu vi phạm → 400 Bad Request kèm thông tin ca bị xung đột.
 // ─────────────────────────────────────────────────────────────────────────────
 const createSession = async (req, res) => {
   try {
-    const { campaignId, campaignMonth, classCode, studyDates, timeSlot, maxCapacity } = req.body;
+    const {
+      campaignId,
+      campaignMonth,
+      classCode,
+      studyDates,
+      timeSlot,
+      maxCapacity,
+      isHidden,
+    } = req.body;
 
-    // ── Validate đầu vào cơ bản ────────────────────────────────────────────
     if (!campaignId || !campaignMonth || !classCode || !studyDates || !timeSlot || !maxCapacity) {
       return res.status(400).json({
         success: false,
@@ -301,7 +242,6 @@ const createSession = async (req, res) => {
       return res.status(400).json({ success: false, message: "campaignMonth phải đúng định dạng 'MM/YYYY'." });
     }
 
-    // ── Validate campaignMonth có trong Campaign.months không ──────────────
     const campaign = await CourseCampaign.findById(campaignId).lean();
     if (!campaign) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học.' });
@@ -320,7 +260,6 @@ const createSession = async (req, res) => {
       return res.status(400).json({ success: false, message: 'studyDates chứa giá trị ngày không hợp lệ.' });
     }
 
-    // ── Validate tất cả studyDates phải thuộc campaignMonth ────────────────
     const [targetMonth, targetYear] = campaignMonth.split('/').map(Number);
     const invalidDates = parsedInfos.filter((info) => {
       return info.month !== targetMonth || info.year !== targetYear;
@@ -335,7 +274,6 @@ const createSession = async (req, res) => {
 
     const parsedDates = parsedInfos.map((info) => info.dateObj);
 
-    // ── Validate và parse timeSlot ─────────────────────────────────────────
     const parsedSlot = parseTimeSlot(timeSlot);
     if (!parsedSlot) {
       return res.status(400).json({
@@ -344,13 +282,9 @@ const createSession = async (req, res) => {
       });
     }
 
-    // ── Kiểm tra xung đột lịch (SRS 4.1) ─────────────────────────────────
-    const conflict = await checkScheduleConflict(
-      parsedDates, timeSlot
-    );
+    const conflict = await checkScheduleConflict(parsedDates, timeSlot);
     if (conflict) return res.status(400).json(conflict);
 
-    // ── Tạo lớp học ────────────────────────────────────────────────────────
     const session = await ClassSession.create({
       campaignId,
       campaignMonth,
@@ -358,9 +292,13 @@ const createSession = async (req, res) => {
       studyDates: parsedDates,
       timeSlot,
       maxCapacity: Number(maxCapacity),
+      isHidden: isHidden !== undefined ? Boolean(isHidden) : false,
     });
 
-    // ── Ghi AuditLog ──────────────────────────────────────────────────────
+    const populatedSession = await ClassSession.findById(session._id)
+      .populate('campaignId', 'title months description isHidden')
+      .lean();
+
     await AuditLog.create({
       adminId: resolveAdminId(req.body.adminId),
       actionType: 'SESSION_CREATE',
@@ -372,7 +310,7 @@ const createSession = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: `Tạo lớp học "${session.classCode}" thành công.`,
-      data: session,
+      data: populatedSession || session,
     });
   } catch (error) {
     return handleServerError(res, 'createSession', error);
@@ -381,16 +319,6 @@ const createSession = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // updateSession — PUT /api/sessions/:id
-//
-// Cập nhật thông tin lớp học với các ràng buộc logic:
-//
-//   • Nếu cập nhật maxCapacity:
-//       - Bắt buộc maxCapacity mới >= currentBooked hiện tại
-//       - Tự động cập nhật status: bằng → 'full', lớn hơn → 'open'
-//
-//   • Nếu cập nhật timeSlot hoặc studyDates:
-//       - Tái sử dụng thuật toán kiểm tra buffer 30 phút
-//       - Thêm { _id: { $ne: sessionId } } để bỏ qua chính ca đang sửa
 // ─────────────────────────────────────────────────────────────────────────────
 const updateSession = async (req, res) => {
   try {
@@ -405,10 +333,9 @@ const updateSession = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy lớp học.' });
     }
 
-    const { classCode, campaignMonth, studyDates, timeSlot, maxCapacity, status } = req.body;
+    const { classCode, campaignMonth, studyDates, timeSlot, maxCapacity, status, isHidden } = req.body;
     const updateFields = {};
 
-    // ── Validate campaignMonth nếu được cập nhật ──────────────────────────
     const effectiveCampaignMonth = campaignMonth ?? current.campaignMonth;
     if (campaignMonth !== undefined) {
       if (!/^\d{2}\/\d{4}$/.test(campaignMonth)) {
@@ -427,7 +354,6 @@ const updateSession = async (req, res) => {
       updateFields.campaignMonth = campaignMonth;
     }
 
-    // ── Ràng buộc maxCapacity ─────────────────────────────────────────────
     if (maxCapacity !== undefined) {
       const newCap = Number(maxCapacity);
 
@@ -443,16 +369,13 @@ const updateSession = async (req, res) => {
       }
 
       updateFields.maxCapacity = newCap;
-      // Tự động cập nhật status theo sức chứa mới
       updateFields.status = newCap === current.currentBooked ? 'full' : 'open';
     }
 
-    // ── Ràng buộc timeSlot / studyDates ──────────────────────────────────
     const newTimeSlot = timeSlot ?? current.timeSlot;
     const newStudyDates = studyDates ?? null;
 
     if (timeSlot !== undefined || studyDates !== undefined) {
-      // Parse và validate timeSlot (dùng giá trị mới hoặc giữ nguyên)
       const parsedSlot = parseTimeSlot(newTimeSlot);
       if (!parsedSlot) {
         return res.status(400).json({
@@ -461,7 +384,6 @@ const updateSession = async (req, res) => {
         });
       }
 
-      // Parse studyDates (dùng giá trị mới nếu có, hoặc giữ nguyên từ DB)
       let parsedDates;
       if (newStudyDates) {
         const arr = Array.isArray(newStudyDates) ? newStudyDates : [newStudyDates];
@@ -470,7 +392,6 @@ const updateSession = async (req, res) => {
           return res.status(400).json({ success: false, message: 'studyDates chứa giá trị ngày không hợp lệ.' });
         }
 
-        // Validate tất cả ngày mới phải thuộc effectiveCampaignMonth
         const [tMonth, tYear] = effectiveCampaignMonth.split('/').map(Number);
         const wrongDates = parsedInfos.filter(
           (info) => info.month !== tMonth || info.year !== tYear
@@ -493,17 +414,16 @@ const updateSession = async (req, res) => {
         updateFields.timeSlot = newTimeSlot;
       }
 
-      // Kiểm tra xung đột, BỎ QUA chính ca đang sửa ({ _id: { $ne: sessionId } })
       const conflict = await checkScheduleConflict(
         parsedDates,
         newTimeSlot,
-        sessionId  // ← excludeId: loại trừ bản thân
+        sessionId
       );
       if (conflict) return res.status(400).json(conflict);
     }
 
-    // ── Các trường cập nhật đơn giản ──────────────────────────────────────
     if (classCode !== undefined) updateFields.classCode = classCode;
+    if (isHidden !== undefined) updateFields.isHidden = Boolean(isHidden);
     if (status !== undefined) {
       const validStatuses = ['open', 'full', 'closed'];
       if (!validStatuses.includes(status)) {
@@ -520,9 +440,8 @@ const updateSession = async (req, res) => {
       sessionId,
       { $set: updateFields },
       { new: true, runValidators: true }
-    ).populate('campaignId', 'title months');
+    ).populate('campaignId', 'title months description isHidden');
 
-    // ── Ghi AuditLog ──────────────────────────────────────────────────────
     await AuditLog.create({
       adminId: resolveAdminId(req.body.adminId),
       actionType: 'SESSION_UPDATE',
@@ -543,7 +462,6 @@ const updateSession = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // deleteSession — DELETE /api/sessions/:id
-// Xóa một lớp học.
 // ─────────────────────────────────────────────────────────────────────────────
 const deleteSession = async (req, res) => {
   try {
@@ -559,8 +477,6 @@ const deleteSession = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy lớp học.' });
     }
 
-    // ── Ghi AuditLog (tách riêng — lỗi log KHÔNG làm fail response) ───────
-    // req.body có thể undefined khi DELETE không gửi Content-Type body
     try {
       await AuditLog.create({
         adminId: resolveAdminId(req.body?.adminId),
@@ -584,22 +500,12 @@ const deleteSession = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // bookSlot — POST /api/sessions/:id/book
-//
-// Chốt 1 slot trong một lớp học.
-//
-// LUỒNG XỬ LÝ ATOMIC (chống Race Condition — SRS 4.2):
-//   Thay vì find() → check → save() (2 round-trips, không an toàn),
-//   ta dùng MỘT lệnh findOneAndUpdate() duy nhất với:
-//     • Filter nguyên tử: status='open' + $expr đảm bảo currentBooked < maxCapacity
-//     • $inc: { currentBooked: 1 } tăng đồng thời, an toàn 100%
-//   MongoDB đảm bảo chỉ một request thắng nếu nhiều Admin gọi cùng lúc.
 // ─────────────────────────────────────────────────────────────────────────────
 const bookSlot = async (req, res) => {
   try {
     const { id: sessionId } = req.params;
     const { name, phone, depositAmount, remainingAmount, isFullyPaid, paymentNote } = req.body;
 
-    // ── Bước 1: Validate dữ liệu học viên ────────────────────────────────
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Họ tên học viên là bắt buộc.' });
     }
@@ -617,24 +523,19 @@ const bookSlot = async (req, res) => {
       bookedAt: new Date(),
     };
 
-    // ── Bước 2: Atomic update — $push học viên + $inc currentBooked ───────
-    // Một lệnh duy nhất, đảm bảo nguyên tử: chỉ thành công khi status='open'
-    // VÀ currentBooked < maxCapacity (atomic guard qua $expr).
     const updatedSession = await ClassSession.findOneAndUpdate(
       {
         _id: sessionId,
         status: 'open',
-        $expr: { $lt: ['$currentBooked', '$maxCapacity'] }, // Điều kiện nguyên tử
+        $expr: { $lt: ['$currentBooked', '$maxCapacity'] },
       },
       {
-        $inc: { currentBooked: 1 },       // Tăng sĩ số nguyên tử
-        $push: { students: newStudent },   // Thêm học viên vào danh sách
+        $inc: { currentBooked: 1 },
+        $push: { students: newStudent },
       },
       { new: true, runValidators: true }
-    ).populate('campaignId', 'title months'); // Populate để Frontend không bị vỡ data
+    ).populate('campaignId', 'title months description isHidden');
 
-    // ── Bước 3: Kiểm tra kết quả ──────────────────────────────────────────
-    // null → không document nào thỏa filter → ca đã đầy HOẶC đã đóng
     if (!updatedSession) {
       return res.status(409).json({
         success: false,
@@ -642,13 +543,11 @@ const bookSlot = async (req, res) => {
       });
     }
 
-    // ── Bước 4: Tự động chuyển status → 'full' nếu vừa đạt maxCapacity ───
     if (updatedSession.currentBooked >= updatedSession.maxCapacity) {
       await ClassSession.updateOne({ _id: sessionId }, { $set: { status: 'full' } });
       updatedSession.status = 'full';
     }
 
-    // ── Bước 5: Ghi AuditLog ─────────────────────────────────────────────
     try {
       await AuditLog.create({
         adminId: resolveAdminId(req.body.adminId),
@@ -667,9 +566,6 @@ const bookSlot = async (req, res) => {
       console.warn('[bookSlot] AuditLog failed (non-critical):', logErr.message);
     }
 
-    // TODO: Emit Socket.io event để broadcast real-time cho tất cả client
-    // io.emit('session_updated', updatedSession);
-
     return res.status(200).json({
       success: true,
       message: `Đã thêm học viên "${newStudent.name}" vào ca ${updatedSession.classCode}.`,
@@ -682,31 +578,21 @@ const bookSlot = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // unbookSlot — POST /api/sessions/:id/unbook
-//
-// Hủy 1 slot đã được chốt.
-//
-// LUỒNG XỬ LÝ ATOMIC:
-//   Dùng $inc: { currentBooked: -1 } kết hợp điều kiện nguyên tử
-//   $expr: { $gt: ['$currentBooked', 0] } để đảm bảo không giảm xuống âm.
-//   Sau khi giảm: nếu currentBooked < maxCapacity → tự động đổi status về 'open'.
 // ─────────────────────────────────────────────────────────────────────────────
 const unbookSlot = async (req, res) => {
   try {
     const { id: sessionId } = req.params;
 
-    // ── Bước 1: Atomic decrease ───────────────────────────────────────────
-    // Guard: status không phải 'closed' VÀ currentBooked > 0
     const updatedSession = await ClassSession.findOneAndUpdate(
       {
         _id: sessionId,
-        status: { $ne: 'closed' },                          // Không cho unbook ca đã đóng
-        $expr: { $gt: ['$currentBooked', 0] },             // Điều kiện nguyên tử: > 0
+        status: { $ne: 'closed' },
+        $expr: { $gt: ['$currentBooked', 0] },
       },
       { $inc: { currentBooked: -1 } },
       { new: true, runValidators: true }
     );
 
-    // ── Bước 2: Kiểm tra kết quả ──────────────────────────────────────────
     if (!updatedSession) {
       return res.status(409).json({
         success: false,
@@ -714,13 +600,11 @@ const unbookSlot = async (req, res) => {
       });
     }
 
-    // ── Bước 3: Tự động chuyển status → 'open' nếu còn chỗ trống ─────────
     if (updatedSession.currentBooked < updatedSession.maxCapacity && updatedSession.status === 'full') {
       await ClassSession.updateOne({ _id: sessionId }, { $set: { status: 'open' } });
       updatedSession.status = 'open';
     }
 
-    // ── Bước 4: Ghi AuditLog ─────────────────────────────────────────────
     await AuditLog.create({
       adminId: resolveAdminId(req.body.adminId),
       actionType: 'SESSION_UNBOOK',
@@ -734,9 +618,6 @@ const unbookSlot = async (req, res) => {
       timestamp: new Date(),
     });
 
-    // TODO: Emit Socket.io event để broadcast real-time
-    // io.emit('session_updated', updatedSession);
-
     return res.status(200).json({
       success: true,
       message: `Hủy slot thành công cho ca ${updatedSession.classCode}.`,
@@ -749,13 +630,6 @@ const unbookSlot = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // removeStudent — DELETE /api/sessions/:sessionId/students/:studentId
-//
-// Xóa một học viên khỏi danh sách đăng ký của ca học.
-//
-// LUỒNG XỬ LÝ ATOMIC:
-//   Dùng $pull để xóa sub-document khỏi mảng students VÀ $inc: { currentBooked: -1 }
-//   trong cùng một lệnh findOneAndUpdate() để đảm bảo nguyên tử.
-//   Guard: currentBooked > 0 để không giảm xuống âm.
 // ─────────────────────────────────────────────────────────────────────────────
 const removeStudent = async (req, res) => {
   try {
@@ -768,22 +642,20 @@ const removeStudent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'studentId không hợp lệ.' });
     }
 
-    // ── Atomic: $pull học viên + $inc currentBooked ────────────────────────
     const updatedSession = await ClassSession.findOneAndUpdate(
       {
         _id: sessionId,
-        'students._id': studentId,           // Đảm bảo học viên tồn tại
-        $expr: { $gt: ['$currentBooked', 0] }, // Guard: không giảm xuống âm
+        'students._id': studentId,
+        $expr: { $gt: ['$currentBooked', 0] },
       },
       {
-        $pull: { students: { _id: studentId } }, // Xóa học viên khỏi mảng
-        $inc: { currentBooked: -1 },              // Giảm sĩ số nguyên tử
+        $pull: { students: { _id: studentId } },
+        $inc: { currentBooked: -1 },
       },
       { new: true, runValidators: true }
-    ).populate('campaignId', 'title months');
+    ).populate('campaignId', 'title months description isHidden');
 
     if (!updatedSession) {
-      // Có thể học viên không tồn tại hoặc currentBooked đã = 0
       const session = await ClassSession.findById(sessionId).lean();
       if (!session) {
         return res.status(404).json({ success: false, message: 'Không tìm thấy lớp học.' });
@@ -791,13 +663,11 @@ const removeStudent = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy học viên trong lớp học này.' });
     }
 
-    // ── Tự động chuyển status → 'open' nếu vừa mở chỗ trống ──────────────
     if (updatedSession.currentBooked < updatedSession.maxCapacity && updatedSession.status === 'full') {
       await ClassSession.updateOne({ _id: sessionId }, { $set: { status: 'open' } });
       updatedSession.status = 'open';
     }
 
-    // ── Ghi AuditLog ──────────────────────────────────────────────────────
     try {
       await AuditLog.create({
         adminId: resolveAdminId(req.body?.adminId),
