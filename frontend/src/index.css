@@ -7,20 +7,20 @@
 html,
 body,
 #root {
-  width: 100vw;
+  width: 100%;
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   background-color: #F5F5F7;
 }
 
-/* ── Month Tabs (cấp 2): làm nổi bật tab tháng đang active ── */
+/* ── Month Tabs (cấp 2): làm nổi bật tab tháng đang active bằng tone xanh dịu hài hòa ── */
 .month-tabs .ant-tabs-tab-active {
-  border-color: #141414 !important;
-  background-color: #141414 !important;
+  border-color: #3B82F6 !important;
+  background-color: #EFF6FF !important;
 }
 
 .month-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #ffffff !important;
+  color: #1D4ED8 !important;
   font-weight: 600;
 }
 
@@ -56,16 +56,12 @@ body,
     white-space: nowrap !important;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none !important;
-    /* Firefox */
     -ms-overflow-style: none !important;
-    /* IE/Edge */
     padding-right: 28px !important;
-    /* Tháng cuối lấp ló ra một nửa báo hiệu có thể vuốt */
   }
 
   .month-tabs .ant-tabs-nav-wrap::-webkit-scrollbar {
     display: none !important;
-    /* Chrome / Safari */
   }
 
   .month-tabs .ant-tabs-nav-list {
@@ -95,7 +91,6 @@ body,
   }
 }
 
-/* ── Mobile Session & Campaign Cards ── */
 /* ── Mobile Session, Campaign & Student Cards ── */
 .mobile-session-card,
 .mobile-campaign-card,
@@ -112,15 +107,12 @@ body,
 /* ── Mobile Month Pills Bar ── */
 .mobile-month-pills-bar {
   scrollbar-width: none !important;
-  /* Firefox */
   -ms-overflow-style: none !important;
-  /* IE/Edge */
   -webkit-overflow-scrolling: touch;
 }
 
 .mobile-month-pills-bar::-webkit-scrollbar {
   display: none !important;
-  /* Chrome / Safari */
 }
 
 .mobile-month-pill {

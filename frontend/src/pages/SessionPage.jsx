@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Table, Button, Input, Select, Space, Tag, Popconfirm, App,
-  Typography, Tooltip, Tabs, Empty, Card, Col, Grid, Switch,
+  Typography, Tooltip, Empty, Card, Col, Grid, Switch,
 } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -13,6 +13,7 @@ import PageHeader from '../components/common/PageHeader';
 import FilterToolbar from '../components/common/FilterToolbar';
 import { SessionStatusTag } from '../components/common/StatusTags';
 import CourseSelectorCard from '../components/sessions/CourseSelectorCard';
+import SessionMonthBar from '../components/sessions/SessionMonthBar';
 import SessionFormModal from '../components/sessions/SessionFormModal';
 import SessionDetailModal from '../components/sessions/SessionDetailModal';
 import SessionMobileView from '../components/sessions/SessionMobileView';
@@ -35,15 +36,16 @@ export default function SessionPage() {
   const [togglingId, setTogglingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
 
-  // ── State Filter & Chọn khóa học ───────────────────────────────────────────
+  // ── State Filter & Chọn khóa học / tháng ───────────────────────────────────
   const [searchCode, setSearchCode] = useState('');
   const debouncedSearchCode = useDebounce(searchCode, 200);
   const [filterStatus, setFilterStatus] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [chosenCampaignId, setChosenCampaignId] = useState(null);
-  const [activeMobileMonth, setActiveMobileMonth] = useState(null);
+  const [chosenMonthKey, setChosenMonthKey] = useState(null);
 
   // ── Gọi song song (Parallel Fetch) + SWR Cache ─────────────────────────────
   const loadData = useCallback(
@@ -122,19 +124,89 @@ export default function SessionPage() {
     return result;
   }, [sessions, debouncedSearchCode, filterStatus]);
 
-  // ── Nhóm dữ liệu phân cấp (Derived State không cần useEffect) ──────────────
-  const groupedData = useMemo(
-    () => groupSessionsByCampaign(filteredSessions),
-    [filteredSessions]
-  );
+  // ── Nhóm dữ liệu phân cấp (Bao gồm cả các tháng chưa có lớp của Khóa học) ──
+  const groupedData = useMemo(() => {
+    const base = groupSessionsByCampaign(filteredSessions);
+
+    campaigns.forEach((camp) => {
+      if (!base[camp._id]) {
+        base[camp._id] = {
+          campaign: camp,
+          months: {},
+          orderedMonths: camp.months ?? [],
+        };
+      } else {
+        base[camp._id].campaign = camp;
+        base[camp._id].orderedMonths = camp.months ?? base[camp._id].orderedMonths ?? [];
+      }
+
+      (camp.months ?? []).forEach((mk) => {
+        if (!base[camp._id].months[mk]) {
+          base[camp._id].months[mk] = {
+            label: `Tháng ${mk}`,
+            sessions: [],
+          };
+        }
+      });
+    });
+
+    return base;
+  }, [filteredSessions, campaigns]);
+
   const campaignIds = useMemo(() => Object.keys(groupedData), [groupedData]);
 
   const activeCampaignId = useMemo(() => {
-    if (chosenCampaignId && (campaignIds.includes(chosenCampaignId) || campaigns.some((c) => c._id === chosenCampaignId))) {
+    if (
+      chosenCampaignId &&
+      (campaignIds.includes(chosenCampaignId) ||
+        campaigns.some((c) => c._id === chosenCampaignId))
+    ) {
       return chosenCampaignId;
     }
-    return campaignIds[0] ?? campaigns[0]?._id ?? null;
-  }, [chosenCampaignId, campaignIds, campaigns]);
+    // Ưu tiên chọn khóa học đầu tiên có lớp học
+    const firstWithSessions = campaigns.find((c) => {
+      const g = groupedData[c._id];
+      return g && Object.values(g.months).some((m) => m.sessions.length > 0);
+    });
+    return firstWithSessions?._id ?? campaignIds[0] ?? campaigns[0]?._id ?? null;
+  }, [chosenCampaignId, campaignIds, campaigns, groupedData]);
+
+  // ── Dữ liệu Tháng & Lớp học theo Campaign đang chọn ────────────────────────
+  const { currentCampaignMonths, sortedMonthKeys } = useMemo(() => {
+    if (!activeCampaignId || !groupedData[activeCampaignId]) {
+      return { currentCampaignMonths: {}, sortedMonthKeys: [] };
+    }
+    const { months, orderedMonths } = groupedData[activeCampaignId];
+    const allKeys = [
+      ...new Set([...orderedMonths, ...Object.keys(months)]),
+    ].sort((a, b) => {
+      const [mA, yA] = String(a).split('/').map(Number);
+      const [mB, yB] = String(b).split('/').map(Number);
+      return yA !== yB ? yA - yB : mA - mB;
+    });
+
+    return { currentCampaignMonths: months, sortedMonthKeys: allKeys };
+  }, [groupedData, activeCampaignId]);
+
+  const selectedMonthKey = useMemo(() => {
+    if (chosenMonthKey && sortedMonthKeys.includes(chosenMonthKey)) {
+      return chosenMonthKey;
+    }
+    // Ưu tiên chọn tháng đầu tiên có lớp học
+    const firstWithSessions = sortedMonthKeys.find(
+      (mk) => (currentCampaignMonths[mk]?.sessions?.length ?? 0) > 0
+    );
+    return firstWithSessions ?? sortedMonthKeys[0] ?? null;
+  }, [chosenMonthKey, sortedMonthKeys, currentCampaignMonths]);
+
+  const activeMonthSessions = useMemo(() => {
+    if (!selectedMonthKey || !currentCampaignMonths[selectedMonthKey]) {
+      return [];
+    }
+    return [...currentCampaignMonths[selectedMonthKey].sessions].sort((a, b) =>
+      a.classCode.localeCompare(b.classCode)
+    );
+  }, [selectedMonthKey, currentCampaignMonths]);
 
   // ── CRUD Handlers ──────────────────────────────────────────────────────────
   const openCreate = useCallback(() => {
@@ -174,6 +246,9 @@ export default function SessionPage() {
           const res = await api.fetchCached('/sessions', { force: true });
           if (res?.data) setSessions(res.data);
         }
+        // Chuyển ngay tới khóa học và tháng của lớp vừa tạo
+        if (payload.campaignId) setChosenCampaignId(payload.campaignId);
+        if (payload.campaignMonth) setChosenMonthKey(payload.campaignMonth);
       }
       closeModal();
     } catch (err) {
@@ -233,8 +308,11 @@ export default function SessionPage() {
     [message]
   );
 
-  const openDetail = useCallback((record) => setSelectedSessionId(record._id), []);
-  const closeDetail = useCallback(() => setSelectedSessionId(null), []);
+  const openDetail = useCallback((record) => {
+    setSelectedSessionId(record._id);
+    setDetailOpen(true);
+  }, []);
+  const closeDetail = useCallback(() => setDetailOpen(false), []);
 
   // ── Cột bảng Session (Desktop) ─────────────────────────────────────────────
   const sessionColumns = useMemo(
@@ -392,70 +470,6 @@ export default function SessionPage() {
     [togglingId, handleToggleHidden, openDetail, openEdit, handleDelete]
   );
 
-  // ── Dữ liệu Tháng & Lớp học theo Campaign đang chọn ────────────────────────
-  const { currentCampaignMonths, sortedMonthKeys } = useMemo(() => {
-    if (!activeCampaignId || !groupedData[activeCampaignId]) {
-      return { currentCampaignMonths: {}, sortedMonthKeys: [] };
-    }
-    const { months, orderedMonths } = groupedData[activeCampaignId];
-    const keys = [
-      ...orderedMonths.filter((m) => months[m]),
-      ...Object.keys(months).filter((m) => !orderedMonths.includes(m)),
-    ];
-    return { currentCampaignMonths: months, sortedMonthKeys: keys };
-  }, [groupedData, activeCampaignId]);
-
-  const selectedMobileMonthKey = useMemo(() => {
-    if (activeMobileMonth && sortedMonthKeys.includes(activeMobileMonth)) {
-      return activeMobileMonth;
-    }
-    return sortedMonthKeys[0] ?? null;
-  }, [activeMobileMonth, sortedMonthKeys]);
-
-  const activeMobileSessions = useMemo(() => {
-    if (!selectedMobileMonthKey || !currentCampaignMonths[selectedMobileMonthKey]) {
-      return [];
-    }
-    return [...currentCampaignMonths[selectedMobileMonthKey].sessions].sort((a, b) =>
-      a.classCode.localeCompare(b.classCode)
-    );
-  }, [selectedMobileMonthKey, currentCampaignMonths]);
-
-  const activeMonthTabs = useMemo(() => {
-    if (!activeCampaignId || !groupedData[activeCampaignId]) return [];
-    return sortedMonthKeys.map((mk) => {
-      const { label, sessions: mSessions } = currentCampaignMonths[mk] ?? {};
-      const sortedSessions = [...(mSessions ?? [])].sort((a, b) =>
-        a.classCode.localeCompare(b.classCode)
-      );
-      return {
-        key: mk,
-        label: <span>{label}</span>,
-        children: (
-          <Table
-            rowKey="_id"
-            dataSource={sortedSessions}
-            columns={sessionColumns}
-            size="small"
-            scroll={{ x: 800 }}
-            pagination={
-              sortedSessions.length > 8
-                ? { pageSize: 8, showTotal: (t) => `${t} lớp`, showSizeChanger: false }
-                : false
-            }
-            locale={{ emptyText: 'Tháng này chưa có lớp học.' }}
-          />
-        ),
-      };
-    });
-  }, [
-    sortedMonthKeys,
-    currentCampaignMonths,
-    activeCampaignId,
-    groupedData,
-    sessionColumns,
-  ]);
-
   const hasActiveFilter = Boolean(searchCode.trim() || filterStatus);
   const resetFilters = useCallback(() => {
     setSearchCode('');
@@ -515,7 +529,10 @@ export default function SessionPage() {
         campaigns={campaigns}
         groupedData={groupedData}
         activeCampaignId={activeCampaignId}
-        onSelectCampaign={setChosenCampaignId}
+        onSelectCampaign={(id) => {
+          setChosenCampaignId(id);
+          setChosenMonthKey(null);
+        }}
       />
 
       {loading ? (
@@ -529,7 +546,7 @@ export default function SessionPage() {
             scroll={{ x: 800 }}
           />
         )
-      ) : !activeCampaignId || activeMonthTabs.length === 0 ? (
+      ) : !activeCampaignId || sortedMonthKeys.length === 0 ? (
         <Empty
           description={
             hasActiveFilter
@@ -542,26 +559,46 @@ export default function SessionPage() {
         <div
           style={{
             background: '#fff',
-            borderRadius: 8,
+            borderRadius: 10,
             border: '1px solid #f0f0f0',
-            padding: '0 16px 16px',
+            overflow: 'hidden',
+            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.03)',
           }}
         >
-          <Tabs
-            type="card"
-            size="small"
-            items={activeMonthTabs}
-            className="month-tabs"
-            style={{ marginTop: 4 }}
+          {/* Thanh chọn Tháng khoa học kèm thống kê nhanh */}
+          <SessionMonthBar
+            sortedMonthKeys={sortedMonthKeys}
+            currentCampaignMonths={currentCampaignMonths}
+            selectedMonthKey={selectedMonthKey}
+            onSelectMonth={setChosenMonthKey}
+            isMobile={false}
           />
+
+          <div style={{ padding: '12px 16px 16px' }}>
+            <Table
+              rowKey="_id"
+              dataSource={activeMonthSessions}
+              columns={sessionColumns}
+              size="small"
+              scroll={{ x: 800 }}
+              pagination={
+                activeMonthSessions.length > 8
+                  ? { pageSize: 8, showTotal: (t) => `${t} lớp`, showSizeChanger: false }
+                  : false
+              }
+              locale={{
+                emptyText: `Tháng ${selectedMonthKey} chưa có lớp học nào.`,
+              }}
+            />
+          </div>
         </div>
       ) : (
         <SessionMobileView
           sortedMonthKeys={sortedMonthKeys}
           currentCampaignMonths={currentCampaignMonths}
-          selectedMonthKey={selectedMobileMonthKey}
-          onSelectMonth={setActiveMobileMonth}
-          sessions={activeMobileSessions}
+          selectedMonthKey={selectedMonthKey}
+          onSelectMonth={setChosenMonthKey}
+          sessions={activeMonthSessions}
           togglingId={togglingId}
           onToggleHidden={handleToggleHidden}
           onDetail={openDetail}
@@ -574,13 +611,15 @@ export default function SessionPage() {
         open={modalOpen}
         editTarget={editTarget}
         campaigns={campaigns}
+        defaultCampaignId={activeCampaignId}
+        defaultMonth={selectedMonthKey}
         submitting={submitting}
         onClose={closeModal}
         onSubmit={handleSubmit}
       />
 
       <SessionDetailModal
-        open={!!selectedSession}
+        open={detailOpen && !!selectedSession}
         session={selectedSession}
         onClose={closeDetail}
         onSessionUpdated={handleSessionUpdated}

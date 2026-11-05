@@ -69,56 +69,65 @@ export default function MainLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      {/* ── Desktop Sider: breakpoint lg, collapsedWidth 0 ────────────── */}
-      <Sider
-        breakpoint="lg"
-        collapsedWidth="0"
-        collapsed={collapsed}
-        onCollapse={(c) => setCollapsed(c)}
-        trigger={null}
-        width={240}
-        style={{
-          background: token.colorBgContainer,
-          borderRight: `1px solid ${token.colorBorderSecondary}`,
-          overflow: 'auto',
-          height: '100vh',
-          position: 'sticky',
-          top: 0,
-          left: 0,
-          zIndex: 100,
-        }}
-      >
-        {/* Logo / Branding */}
-        <div
+      {/* ── Desktop Sider: cố định bên trái (fixed 100vh), đồng bộ chiều cao Header 64px ── */}
+      {!isMobile && (
+        <Sider
+          collapsible
+          collapsedWidth={0}
+          collapsed={collapsed}
+          onCollapse={(c) => setCollapsed(c)}
+          trigger={null}
+          width={240}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: collapsed ? '20px 12px' : '20px 20px',
-            borderBottom: `1px solid ${token.colorBorderSecondary}`,
-            transition: 'padding 0.2s',
-            overflow: 'hidden',
+            background: token.colorBgContainer,
+            borderRight: collapsed ? 'none' : `1px solid ${token.colorBorderSecondary}`,
+            overflowY: 'auto',
+            height: '100vh',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            zIndex: 100,
           }}
         >
-          {!collapsed && (
-            <Text strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>
-              Emisa Calendar
-            </Text>
-          )}
-        </div>
+          {/* Logo / Branding — cao đúng 64px khớp tuyệt đối với Header bên phải */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              height: 64,
+              padding: collapsed ? '0 12px' : '0 20px',
+              borderBottom: `1px solid ${token.colorBorderSecondary}`,
+              boxSizing: 'border-box',
+              transition: 'padding 0.2s',
+              overflow: 'hidden',
+              position: 'sticky',
+              top: 0,
+              background: token.colorBgContainer,
+              zIndex: 1,
+            }}
+          >
+            {!collapsed && (
+              <Text strong style={{ fontSize: 16, whiteSpace: 'nowrap', lineHeight: 1 }}>
+                Emisa Calendar
+              </Text>
+            )}
+          </div>
 
-        {/* Navigation Menu */}
-        <Menu
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          onClick={handleMenuClick}
-          style={{
-            border: 'none',
-            marginTop: 8,
-          }}
-        />
-      </Sider>
+          {/* Navigation Menu */}
+          <Menu
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            items={menuItems}
+            onClick={handleMenuClick}
+            style={{
+              border: 'none',
+              marginTop: 8,
+            }}
+          />
+        </Sider>
+      )}
 
       {/* ── Mobile Off-canvas Drawer ───────────────────────────────────── */}
       <Drawer
@@ -179,19 +188,28 @@ export default function MainLayout() {
       </Drawer>
 
       {/* ── Main area: Header + Content + Footer ────────────────────────── */}
-      <Layout>
+      <Layout
+        style={{
+          marginLeft: isMobile ? 0 : collapsed ? 0 : 240,
+          transition: 'margin-left 0.2s',
+          minHeight: '100vh',
+        }}
+      >
         {/* Header */}
         <Header
           style={{
+            height: 64,
+            lineHeight: '64px',
             padding: screens.md ? '0 24px' : '0 12px',
             background: token.colorBgContainer,
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
+            boxSizing: 'border-box',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
-            zIndex: 10,
+            zIndex: 99,
           }}
         >
           {/* Cạnh trái: Hamburger Menu (Mobile) hoặc Thu gọn Sider (Desktop) & Tiêu đề */}

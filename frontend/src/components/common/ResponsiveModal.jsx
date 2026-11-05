@@ -31,9 +31,10 @@ export default function ResponsiveModal({
         cancelText={cancelText}
         confirmLoading={submitting}
         footer={footer}
+        centered
         destroyOnHidden
         width={width}
-        style={width > 800 ? { maxWidth: '95vw', top: 20 } : undefined}
+        style={width > 800 ? { maxWidth: '95vw' } : undefined}
       >
         {children}
       </Modal>

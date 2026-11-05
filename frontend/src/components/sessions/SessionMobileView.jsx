@@ -3,6 +3,7 @@ import { Card, Flex, Space, Button, Popconfirm, Typography, Tag, Empty, Switch }
 import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ClassCodeTag, SessionStatusTag } from '../common/StatusTags';
+import SessionMonthBar from './SessionMonthBar';
 
 const { Text } = Typography;
 
@@ -103,7 +104,7 @@ const MobileSessionCard = memo(function MobileSessionCard({
       <div
         style={{
           display: 'flex',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           gap: 8,
           marginBottom: 10,
         }}
@@ -114,21 +115,31 @@ const MobileSessionCard = memo(function MobileSessionCard({
             fontSize: 14,
             color: '#8c8c8c',
             flexShrink: 0,
-            paddingTop: 1,
           }}
         >
           Ngày học:
         </Text>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {session.studyDates?.map((date, index) => (
-            <Tag
-              key={index}
-              color="blue"
-              style={{ fontWeight: 600, fontSize: 12, margin: 0, padding: '1px 6px' }}
-            >
-              {dayjs(date).format('DD/MM')}
-            </Tag>
-          ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+          {[...(session.studyDates ?? [])]
+            .sort((a, b) => new Date(a) - new Date(b))
+            .map((date, index) => (
+              <span
+                key={index}
+                style={{
+                  background: '#F5F5F7',
+                  border: '1px solid #E5E7EB',
+                  color: '#1f1f1f',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  lineHeight: 1.35,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {dayjs(date).format('DD/MM')}
+              </span>
+            ))}
         </div>
       </div>
 
@@ -165,7 +176,7 @@ const MobileSessionCard = memo(function MobileSessionCard({
 });
 
 /**
- * Giao diện Mobile cho SessionPage: Thanh chọn tháng dạng Pill cuộn ngang + Danh sách thẻ lớp học
+ * Giao diện Mobile cho SessionPage: Thanh chọn tháng khoa học + Danh sách thẻ lớp học
  */
 export default function SessionMobileView({
   sortedMonthKeys,
@@ -181,50 +192,14 @@ export default function SessionMobileView({
 }) {
   return (
     <div>
-      {/* 1. Dải thẻ tháng dạng Pill cuộn ngang */}
-      <div
-        className="mobile-month-pills-bar"
-        style={{
-          display: 'flex',
-          overflowX: 'auto',
-          gap: '8px',
-          padding: '8px 0 16px 0',
-          scrollbarWidth: 'none',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        {sortedMonthKeys.map((mk) => {
-          const monthData = currentCampaignMonths[mk];
-          const label = monthData?.label ?? `Tháng ${mk}`;
-          const count = monthData?.sessions?.length ?? 0;
-          const isActive = mk === selectedMonthKey;
-
-          return (
-            <div
-              key={mk}
-              onClick={() => onSelectMonth(mk)}
-              className="mobile-month-pill"
-              style={{
-                borderRadius: '20px',
-                padding: '6px 16px',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.3s',
-                cursor: 'pointer',
-                flexShrink: 0,
-                userSelect: 'none',
-                backgroundColor: isActive ? '#141414' : '#f0f2f5',
-                color: isActive ? '#ffffff' : '#595959',
-                fontWeight: isActive ? 600 : 400,
-                fontSize: '13px',
-                border: 'none',
-                boxShadow: isActive ? '0 2px 6px rgba(0, 0, 0, 0.2)' : 'none',
-              }}
-            >
-              {label} {count > 0 && `(${count})`}
-            </div>
-          );
-        })}
-      </div>
+      {/* 1. Thanh chọn Tháng & Tóm tắt trạng thái lớp trong tháng */}
+      <SessionMonthBar
+        sortedMonthKeys={sortedMonthKeys}
+        currentCampaignMonths={currentCampaignMonths}
+        selectedMonthKey={selectedMonthKey}
+        onSelectMonth={onSelectMonth}
+        isMobile
+      />
 
       {/* 2. Danh sách Card lớp học */}
       {sessions.length === 0 ? (

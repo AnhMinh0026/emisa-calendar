@@ -508,11 +508,12 @@ export default function StudentPage() {
                     cursor: 'pointer',
                     flexShrink: 0,
                     userSelect: 'none',
-                    backgroundColor: isActive ? '#141414' : '#f0f2f5',
-                    color: isActive ? '#ffffff' : '#595959',
-                    fontWeight: isActive ? 600 : 400,
+                    backgroundColor: isActive ? '#EFF6FF' : '#ffffff',
+                    color: isActive ? '#1D4ED8' : '#334155',
+                    border: isActive ? '1.5px solid #3B82F6' : '1px solid #E2E8F0',
+                    fontWeight: isActive ? 700 : 500,
                     fontSize: 13,
-                    boxShadow: isActive ? '0 2px 6px rgba(0, 0, 0, 0.18)' : 'none',
+                    boxShadow: isActive ? '0 2px 8px rgba(59, 130, 246, 0.14)' : 'none',
                   }}
                 >
                   Tháng {mk} ({studentCount})
