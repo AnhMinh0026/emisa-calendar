@@ -153,7 +153,17 @@ body,
 
 .session-card-interactive:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  border-color: #1D1D1F !important;
+  box-shadow: 0 8px 24px rgba(29, 29, 31, 0.08) !important;
+}
+
+.session-card-interactive:hover .session-card-cta-arrow {
+  transform: translateX(3px);
+}
+
+.session-card-interactive:hover .session-date-box {
+  background: #F4F4F8 !important;
+  border-color: #E0E0E6 !important;
 }
 
 .session-card-interactive:active {
@@ -221,9 +231,19 @@ body,
   background: #F5F5F8 !important;
 }
 
-/* ── Clean Close Button Outline in Minimal Course Modal ── */
+/* ── Clean Close Button Outline & Hide Scrollbar in Minimal Course Modal ── */
 .minimal-course-modal .ant-modal-close {
   outline: none !important;
   box-shadow: none !important;
   border-radius: 50% !important;
+}
+
+.course-modal-list {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.course-modal-list::-webkit-scrollbar {
+  display: none !important;
 }

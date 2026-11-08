@@ -1,7 +1,7 @@
-import { memo } from 'react';
-import { Modal, Typography, Flex, ConfigProvider, Grid } from 'antd';
-import { CheckOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import { T } from '../../constants';
+import { memo } from "react";
+import { Modal, Typography, Flex, ConfigProvider, Grid } from "antd";
+import { CheckOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import { T } from "../../constants";
 
 const { Title, Text } = Typography;
 
@@ -13,8 +13,8 @@ const formatMonthList = (monthKeys) => {
   if (!monthKeys || monthKeys.length === 0) return null;
 
   const parsed = monthKeys.map((mk) => {
-    const [mm, yyyy] = String(mk).split('/');
-    return { raw: mk, mm: mm || mk, yyyy: yyyy || '' };
+    const [mm, yyyy] = String(mk).split("/");
+    return { raw: mk, mm: mm || mk, yyyy: yyyy || "" };
   });
 
   const years = [...new Set(parsed.map((p) => p.yyyy).filter(Boolean))];
@@ -43,16 +43,20 @@ const CourseSelectModal = memo(function CourseSelectModal({
         open={open}
         onCancel={onClose}
         footer={null}
-        width={isMobile ? 'calc(100vw - 24px)' : 660}
+        width={isMobile ? "calc(100vw - 24px)" : 660}
         centered
         destroyOnHidden
         className="minimal-course-modal"
-        style={isMobile ? { maxWidth: 'calc(100vw - 24px)', margin: '0 auto' } : undefined}
+        style={
+          isMobile
+            ? { maxWidth: "calc(100vw - 24px)", margin: "0 auto" }
+            : undefined
+        }
         styles={{
           content: {
             borderRadius: isMobile ? 18 : 20,
-            padding: isMobile ? '20px 14px 20px' : '28px 28px 30px',
-            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.10)',
+            padding: isMobile ? "20px 14px 20px" : "28px 28px 30px",
+            boxShadow: "0 24px 48px rgba(0, 0, 0, 0.10)",
           },
           header: {
             marginBottom: isMobile ? 14 : 20,
@@ -68,9 +72,9 @@ const CourseSelectModal = memo(function CourseSelectModal({
                 fontWeight: 700,
                 fontSize: isMobile ? 17.5 : 22,
                 letterSpacing: -0.4,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               Chọn khóa học phù hợp với bạn
@@ -80,28 +84,32 @@ const CourseSelectModal = memo(function CourseSelectModal({
                 color: T.gray3,
                 fontSize: isMobile ? 12.5 : 14,
                 fontWeight: 400,
-                display: 'block',
+                display: "block",
                 marginTop: 3,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {isMobile
-                ? 'Chạm vào khóa học để xem lịch và ca học chi tiết'
-                : 'Chạm vào khóa học để xem lịch khai giảng và các ca học chi tiết'}
+                ? "Chạm vào khóa học để xem lịch và ca học chi tiết"
+                : "Chạm vào khóa học để xem lịch khai giảng và các ca học chi tiết"}
             </Text>
           </div>
         }
       >
         <div
+          className="course-modal-list"
           style={{
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             gap: isMobile ? 10 : 14,
-            maxHeight: '72vh',
-            overflowY: 'auto',
-            padding: '2px',
+            maxHeight: "72vh",
+            overflowY: "auto",
+            padding: "4px 2px",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {campaignList.map((campaign) => {
@@ -111,12 +119,6 @@ const CourseSelectModal = memo(function CourseSelectModal({
               ? Object.keys(campaignGroup.months).sort()
               : [];
             const monthInfo = formatMonthList(monthKeys);
-            const allCourseSessions = campaignGroup
-              ? Object.values(campaignGroup.months).flat()
-              : [];
-            const openCount = allCourseSessions.filter(
-              (s) => s.status === 'open'
-            ).length;
 
             return (
               <div
@@ -126,16 +128,16 @@ const CourseSelectModal = memo(function CourseSelectModal({
                   onSelectCampaign(campaign._id);
                   onClose();
                 }}
-                className={`course-modal-card ${isSelected ? 'selected' : ''}`}
+                className={`course-modal-card ${isSelected ? "selected" : ""}`}
                 style={{
-                  padding: isMobile ? '14px 14px' : '20px 22px',
+                  padding: isMobile ? "14px 14px" : "20px 22px",
                   borderRadius: isMobile ? 14 : 16,
-                  background: isSelected ? '#FAFAFC' : T.white,
+                  background: isSelected ? "#FAFAFC" : T.white,
                   border: isSelected
                     ? `1.5px solid ${T.black}`
                     : `1px solid ${T.gray2}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: "pointer",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
               >
                 {/* Hàng 1: Tên khóa học (1 dòng duy nhất, không bao giờ rớt dòng) + Mũi tên */}
@@ -147,9 +149,9 @@ const CourseSelectModal = memo(function CourseSelectModal({
                       color: T.black,
                       letterSpacing: -0.3,
                       lineHeight: 1.35,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                       flex: 1,
                       minWidth: 0,
                     }}
@@ -162,14 +164,14 @@ const CourseSelectModal = memo(function CourseSelectModal({
                     style={{
                       width: isMobile ? 26 : 28,
                       height: isMobile ? 26 : 28,
-                      borderRadius: '50%',
-                      background: isSelected ? T.black : '#F4F4F6',
+                      borderRadius: "50%",
+                      background: isSelected ? T.black : "#F4F4F6",
                       color: isSelected ? T.white : T.black,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                       flexShrink: 0,
-                      transition: 'all 0.2s ease',
+                      transition: "all 0.2s ease",
                     }}
                   >
                     {isSelected ? (
@@ -184,8 +186,8 @@ const CourseSelectModal = memo(function CourseSelectModal({
                 {campaign.description?.trim() && (
                   <Text
                     style={{
-                      display: 'block',
-                      color: '#6E6E73',
+                      display: "block",
+                      color: "#6E6E73",
                       fontSize: isMobile ? 12.5 : 13.5,
                       lineHeight: 1.5,
                       marginTop: 5,
@@ -198,25 +200,25 @@ const CourseSelectModal = memo(function CourseSelectModal({
                 {/* Hàng 3: Lịch khai giảng (Trái) & Số lớp còn chỗ (Phải) — Gọn trên 1 dòng duy nhất */}
                 <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'nowrap',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "nowrap",
                     gap: 8,
                     marginTop: isMobile ? 10 : 14,
                     paddingTop: isMobile ? 9 : 12,
-                    borderTop: '1px solid #F2F2F7',
+                    borderTop: "1px solid #F2F2F7",
                     fontSize: isMobile ? 12.5 : 13,
                   }}
                 >
                   {/* Bên trái: Tháng 09 · 10 · 11 · 12 (Chỉ viết chữ "Tháng" 1 lần ở đầu) */}
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      display: "flex",
+                      alignItems: "center",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                       minWidth: 0,
                       flex: 1,
                     }}
@@ -229,17 +231,19 @@ const CourseSelectModal = memo(function CourseSelectModal({
                           </span>
                         )}
                         <span style={{ color: T.black, fontWeight: 600 }}>
-                          Tháng{' '}
+                          Tháng{" "}
                           {monthInfo.items.map((item, index) => (
                             <span key={item.raw}>
                               {item.mm}
-                              {!monthInfo.sameYear && item.yyyy ? `/${item.yyyy}` : ''}
+                              {!monthInfo.sameYear && item.yyyy
+                                ? `/${item.yyyy}`
+                                : ""}
                               {index < monthInfo.items.length - 1 && (
                                 <span
                                   style={{
-                                    color: '#C7C7CC',
+                                    color: "#C7C7CC",
                                     fontWeight: 400,
-                                    margin: '0 5px',
+                                    margin: "0 5px",
                                   }}
                                 >
                                   ·
@@ -265,7 +269,7 @@ const CourseSelectModal = memo(function CourseSelectModal({
                   </div>
 
                   {/* Bên phải: Trạng thái số lớp còn chỗ */}
-                  <div style={{ flexShrink: 0 }}>
+                  {/* <div style={{ flexShrink: 0 }}>
                     {openCount > 0 ? (
                       <span
                         style={{
@@ -306,7 +310,7 @@ const CourseSelectModal = memo(function CourseSelectModal({
                         {allCourseSessions.length} lớp
                       </span>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               </div>
             );

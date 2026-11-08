@@ -1,20 +1,20 @@
-'use strict';
+"use strict";
 
 // ─────────────────────────────────────────────
 // 1. Load biến môi trường từ file .env
 //    (Phải gọi TRƯỚC KHI import bất kỳ module nào dùng process.env)
 // ─────────────────────────────────────────────
-require('dotenv').config();
+require("dotenv").config();
 
-const express       = require('express');
-const cors          = require('cors');
+const express = require("express");
+const cors = require("cors");
 
-const connectDB      = require('./config/db');
-const authRoutes     = require('./routes/authRoutes');
-const sessionRoutes  = require('./routes/sessionRoutes');
-const campaignRoutes = require('./routes/campaignRoutes');
-const settingRoutes  = require('./routes/settingRoutes');
-const studentRoutes  = require('./routes/studentRoutes');
+const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const sessionRoutes = require("./routes/sessionRoutes");
+const campaignRoutes = require("./routes/campaignRoutes");
+const settingRoutes = require("./routes/settingRoutes");
+const studentRoutes = require("./routes/studentRoutes");
 
 // ─────────────────────────────────────────────
 // 2. Kết nối MongoDB Atlas
@@ -42,16 +42,16 @@ app.use(express.json());
 
 // Health-check endpoint — dùng để kiểm tra server còn sống
 // GET /  →  { message: "Emisa Calendar API is running!" }
-app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Emisa Calendar API is running!' });
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "Emisa Calendar API is running!" });
 });
 
 // ── API Routes ──────────────────────────────────────────
-app.use('/api/auth',      authRoutes);
-app.use('/api/campaigns', campaignRoutes);
-app.use('/api/sessions',  sessionRoutes);
-app.use('/api/settings',  settingRoutes);
-app.use('/api/students',  studentRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/campaigns", campaignRoutes);
+app.use("/api/sessions", sessionRoutes);
+app.use("/api/settings", settingRoutes);
+app.use("/api/students", studentRoutes);
 
 // TODO: Mount thêm khi phát triển các module khác
 // app.use('/api/admins', require('./routes/adminRoutes'));
@@ -63,5 +63,7 @@ app.use('/api/students',  studentRoutes);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại http://localhost:${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(
+    `Server is running at http://localhost:${PORT} [${process.env.NODE_ENV || "development"}]`,
+  );
 });

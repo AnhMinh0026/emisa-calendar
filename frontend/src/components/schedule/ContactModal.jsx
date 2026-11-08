@@ -20,7 +20,7 @@ const { Text } = Typography;
 
 /**
  * Modal hiển thị chi tiết ca học & hỗ trợ sao chép thông tin nhanh để gửi qua Facebook / Zalo
- * Thiết kế Minimalist, hiển thị đầy đủ thông tin ngày học rõ ràng trên cả Web & Mobile
+ * Đồng bộ ngôn ngữ thiết kế với CustomerSessionCard (Phương án 1)
  */
 const ContactModal = memo(function ContactModal({
   open,
@@ -59,30 +59,37 @@ const ContactModal = memo(function ContactModal({
     return lines.join("\n");
   }, [session, sortedDates, courseTitle]);
 
-  const handleCopy = useCallback(async () => {
-    const text = buildCopyText();
-    if (!text) return;
+  const copyToClipboard = useCallback(
+    async (showNotice = true) => {
+      const text = buildCopyText();
+      if (!text) return;
 
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+        }
+        setCopied(true);
+        if (showNotice) {
+          message.success("Đã sao chép thông tin lớp học");
+        }
+        setTimeout(() => setCopied(false), 2500);
+      } catch {
+        if (showNotice) {
+          message.error("Không thể sao chép, vui lòng thử lại");
+        }
       }
-      setCopied(true);
-      message.success("Đã sao chép thông tin lớp học");
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      message.error("Không thể sao chép, vui lòng thử lại");
-    }
-  }, [buildCopyText]);
+    },
+    [buildCopyText],
+  );
 
   const handleClose = useCallback(() => {
     setCopied(false);
@@ -95,7 +102,7 @@ const ContactModal = memo(function ContactModal({
         open={open}
         onCancel={handleClose}
         footer={null}
-        width={isMobile ? "calc(100vw - 24px)" : 540}
+        width={isMobile ? "calc(100vw - 24px)" : 480}
         destroyOnHidden
         centered
         className="minimal-course-modal"
@@ -107,11 +114,11 @@ const ContactModal = memo(function ContactModal({
         styles={{
           content: {
             borderRadius: isMobile ? 18 : 20,
-            padding: isMobile ? "20px 16px 20px" : "26px 28px 28px",
+            padding: isMobile ? "20px 16px 20px" : "24px 26px 26px",
             boxShadow: "0 24px 48px rgba(0, 0, 0, 0.12)",
           },
           header: {
-            marginBottom: isMobile ? 14 : 16,
+            marginBottom: isMobile ? 12 : 14,
           },
           body: {
             paddingTop: 0,
@@ -122,172 +129,250 @@ const ContactModal = memo(function ContactModal({
             <Text
               strong
               style={{
-                fontSize: isMobile ? 17 : 19,
+                fontSize: isMobile ? 17.5 : 19,
                 color: T.black,
                 letterSpacing: -0.3,
                 display: "block",
-                lineHeight: 1.3,
+                lineHeight: 1.25,
               }}
             >
               Đăng ký lớp học
+            </Text>
+            <Text
+              style={{
+                fontSize: isMobile ? 12.5 : 13,
+                color: T.gray3,
+                fontWeight: 400,
+                display: "block",
+                marginTop: 2,
+              }}
+            >
+              Kiểm tra thông tin ca học và gửi tư vấn
             </Text>
           </div>
         }
       >
         {session && (
-          <div
-            style={{
-              background: "#FAFAFC",
-              border: `1px solid ${T.gray2}`,
-              borderRadius: 16,
-              padding: isMobile ? "14px 14px" : "16px 18px",
-              marginBottom: 18,
-            }}
-          >
-            {/* Dòng tiêu đề thẻ: Mã lớp + Khóa học & Trạng thái chỗ trống */}
-            <Flex
-              justify="space-between"
-              align="center"
-              gap={8}
+          <>
+            <div
               style={{
-                paddingBottom: 12,
+                background: "#FAFAFC",
+                border: `1px solid ${T.gray2}`,
+                borderRadius: 16,
+                padding: isMobile ? "14px" : "16px",
                 marginBottom: 12,
-                borderBottom: "1px solid #EFEFF4",
               }}
             >
-              <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
-                <span
-                  style={{
-                    backgroundColor: "#F3E8FF",
-                    color: "#7E22CE",
-                    fontWeight: 700,
-                    fontSize: 12,
-                    padding: "2px 9px",
-                    borderRadius: 6,
-                    flexShrink: 0,
-                    letterSpacing: 0.3,
-                  }}
-                >
-                  {session.classCode}
-                </span>
-                <Text
-                  strong
-                  style={{
-                    fontSize: isMobile ? 14 : 14.5,
-                    color: T.black,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {courseTitle || `Lớp ${session.classCode}`}
-                </Text>
+              {/* ── Hàng 1: Mã lớp (Nền đen) + Tên khóa học & Pill chỗ trống ── */}
+              <Flex
+                justify="space-between"
+                align="center"
+                gap={8}
+                style={{
+                  paddingBottom: 12,
+                  marginBottom: 12,
+                  borderBottom: "1px solid #EFEFF4",
+                }}
+              >
+                <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
+                  <span
+                    style={{
+                      backgroundColor: T.black,
+                      color: T.white,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      padding: "3px 9px",
+                      borderRadius: 8,
+                      flexShrink: 0,
+                      letterSpacing: 0.3,
+                      lineHeight: "18px",
+                    }}
+                  >
+                    {session.classCode}
+                  </span>
+                  <Text
+                    strong
+                    style={{
+                      fontSize: isMobile ? 14 : 15,
+                      color: T.black,
+                      letterSpacing: -0.2,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {courseTitle || `Lớp ${session.classCode}`}
+                  </Text>
+                </Flex>
+
+                {remainingSlots > 0 && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: "#15803D",
+                      background: "#ECFDF3",
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "#22C55E",
+                        display: "inline-block",
+                      }}
+                    />
+                    Còn {remainingSlots} chỗ
+                  </span>
+                )}
               </Flex>
 
-              {remainingSlots > 0 && (
-                <span
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    color: "#15803D",
-                    background: "#F0FDF4",
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}
-                >
-                  Còn {remainingSlots} chỗ
-                </span>
-              )}
-            </Flex>
-
-            {/* Chi tiết lịch học: Tách tiêu đề & thông tin rõ ràng để hiển thị trọn vẹn 100% trên 1 dòng */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* Giờ học */}
-              <div>
-                <Text
-                  style={{
-                    display: "block",
-                    color: T.gray3,
-                    fontSize: 12,
-                    marginBottom: 2,
-                  }}
-                >
-                  Giờ học
-                </Text>
-                <Text
-                  strong
-                  style={{
-                    color: T.black,
-                    fontSize: isMobile ? 14 : 14.5,
-                    letterSpacing: -0.2,
-                  }}
-                >
-                  {session.timeSlot}
-                </Text>
-              </div>
-
-              {/* Ngày học: Tiêu đề ở trên (kèm tháng/năm), danh sách ngày trải rộng bên dưới không bao giờ bị cắt '...' */}
-              <div>
-                <Flex
-                  justify="space-between"
-                  align="center"
-                  style={{ marginBottom: 3 }}
-                >
-                  <Text style={{ color: T.gray3, fontSize: 12 }}>
-                    Ngày học
-                  </Text>
-                  {session.campaignMonth && (
-                    <Text style={{ color: T.gray3, fontSize: 12 }}>
-                      Tháng {session.campaignMonth}
-                    </Text>
-                  )}
-                </Flex>
+              {/* ── Hàng 2: Khung giờ học & Lịch khai giảng (Chia 2 ô ngang hàng) ── */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: session.campaignMonth
+                    ? "repeat(2, minmax(0, 1fr))"
+                    : "1fr",
+                  gap: 8,
+                  marginBottom: sortedDates.length > 0 ? 10 : 0,
+                }}
+              >
                 <div
                   style={{
-                    fontSize: isMobile ? 14 : 14.5,
-                    fontWeight: 600,
-                    color: T.black,
-                    lineHeight: 1.5,
-                    wordBreak: "keep-all",
+                    background: T.white,
+                    border: "1px solid #ECECEE",
+                    borderRadius: 12,
+                    padding: "8px 12px",
                   }}
                 >
-                  {sortedDates.map((d, index) => (
-                    <span key={d} style={{ whiteSpace: "nowrap" }}>
-                      {dayjs(d).format("DD/MM")}
-                      {index < sortedDates.length - 1 && (
-                        <span
-                          style={{
-                            color: "#C7C7CC",
-                            fontWeight: 400,
-                            margin: isMobile ? "0 6px" : "0 8px",
-                          }}
-                        >
-                          ·
-                        </span>
-                      )}
-                    </span>
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      color: T.gray3,
+                      marginBottom: 2,
+                    }}
+                  >
+                    Khung giờ học
+                  </div>
+                  <div
+                    style={{
+                      fontSize: isMobile ? 13.5 : 14,
+                      fontWeight: 700,
+                      color: T.black,
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    {session.timeSlot}
+                  </div>
+                </div>
+
+                {session.campaignMonth && (
+                  <div
+                    style={{
+                      background: T.white,
+                      border: "1px solid #ECECEE",
+                      borderRadius: 12,
+                      padding: "8px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11.5,
+                        color: T.gray3,
+                        marginBottom: 2,
+                      }}
+                    >
+                      Lịch khai giảng
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isMobile ? 13.5 : 14,
+                        fontWeight: 700,
+                        color: T.black,
+                        letterSpacing: -0.2,
+                      }}
+                    >
+                      Tháng {session.campaignMonth}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Hàng 3: Lưới các buổi học (Tối đa 4 buổi/dòng, buổi thứ 5 tự xuống dòng) ── */}
+              {sortedDates.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    columnGap: 6,
+                    rowGap: 8,
+                  }}
+                >
+                  {sortedDates.map((d, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: T.white,
+                        border: "1px solid #ECECEE",
+                        borderRadius: 10,
+                        padding: "6px 4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10.5,
+                          color: T.gray3,
+                          fontWeight: 500,
+                          lineHeight: 1.2,
+                          marginBottom: 2,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Buổi {i + 1}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          color: T.black,
+                          lineHeight: 1.25,
+                          letterSpacing: -0.2,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {dayjs(d).format("DD/MM")}
+                      </div>
+                    </div>
                   ))}
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Nút sao chép thông tin để dán vào khung chat */}
+            {/* ── Nút sao chép thông tin (Tách riêng bên ngoài khung thông tin lớp) ── */}
             <Button
               block
-              onClick={handleCopy}
+              onClick={() => copyToClipboard(true)}
               icon={copied ? <CheckOutlined /> : <CopyOutlined />}
               style={{
-                marginTop: 14,
-                height: 38,
-                borderRadius: 10,
+                height: 40,
+                borderRadius: 12,
+                marginBottom: 16,
                 fontWeight: 600,
-                fontSize: 13,
-                background: copied ? "#F0FDF4" : T.white,
+                fontSize: 13.5,
+                background: copied ? "#ECFDF3" : T.white,
                 color: copied ? "#15803D" : T.black,
                 borderColor: copied ? "#BBF7D0" : T.gray2,
-                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
                 transition: "all 0.2s ease",
               }}
             >
@@ -295,7 +380,7 @@ const ContactModal = memo(function ContactModal({
                 ? "Đã sao chép thông tin lớp"
                 : "Sao chép thông tin để gửi tư vấn"}
             </Button>
-          </div>
+          </>
         )}
 
         {/* Hướng dẫn ngắn gọn */}
@@ -305,7 +390,7 @@ const ContactModal = memo(function ContactModal({
             color: T.gray3,
             fontSize: 13,
             lineHeight: 1.5,
-            marginBottom: 14,
+            marginBottom: 12,
             textAlign: "center",
           }}
         >
@@ -314,7 +399,7 @@ const ContactModal = memo(function ContactModal({
           học nhanh nhất
         </Text>
 
-        {/* Nút liên hệ Facebook & Zalo cân đối */}
+        {/* Nút liên hệ Facebook & Zalo cân đối (tự động copy nếu khách bấm thẳng) */}
         <Flex gap={10}>
           <Button
             type="primary"
@@ -323,11 +408,14 @@ const ContactModal = memo(function ContactModal({
             target="_blank"
             rel="noopener noreferrer"
             disabled={!hasFB}
+            onClick={() => {
+              if (!copied) copyToClipboard(false);
+            }}
             className="btn-center-content"
             style={{
               flex: 1,
-              height: 40,
-              borderRadius: 10,
+              height: 42,
+              borderRadius: 12,
               background: hasFB ? "#1877F2" : undefined,
               borderColor: hasFB ? "#1877F2" : undefined,
               fontWeight: 600,
@@ -358,11 +446,14 @@ const ContactModal = memo(function ContactModal({
             target="_blank"
             rel="noopener noreferrer"
             disabled={!hasZalo}
+            onClick={() => {
+              if (!copied) copyToClipboard(false);
+            }}
             className="btn-center-content"
             style={{
               flex: 1,
-              height: 40,
-              borderRadius: 10,
+              height: 42,
+              borderRadius: 12,
               background: hasZalo ? "#0068FF" : undefined,
               borderColor: hasZalo ? "#0068FF" : undefined,
               fontWeight: 600,

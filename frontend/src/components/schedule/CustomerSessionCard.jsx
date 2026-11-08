@@ -1,16 +1,19 @@
 import { memo } from 'react';
 import { Card, Flex, Grid } from 'antd';
+import { ArrowRightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { T, CUSTOMER_STATUS_CFG } from '../../constants';
 
 /**
- * Thẻ hiển thị thông tin lớp học cho khách hàng (được bọc React.memo để chống re-render thừa)
+ * Thẻ hiển thị thông tin lớp học cho khách hàng
+ * Kết hợp Header & Footer tinh gọn (Phương án 1) + Lịch học chia ô tối đa 4 buổi/dòng (Phương án 3)
  */
 const CustomerSessionCard = memo(function CustomerSessionCard({ session, onRegister }) {
   const screens = Grid.useBreakpoint();
   const isFull = session.status !== 'open';
   const cfg = CUSTOMER_STATUS_CFG[session.status] ?? CUSTOMER_STATUS_CFG.closed;
   const sortedDates = [...(session.studyDates ?? [])].sort((a, b) => new Date(a) - new Date(b));
+  const remainingSeats = Math.max(0, (session.maxCapacity ?? 0) - (session.currentBooked ?? 0));
 
   return (
     <Card
@@ -19,7 +22,7 @@ const CustomerSessionCard = memo(function CustomerSessionCard({ session, onRegis
       onClick={() => !isFull && onRegister?.(session)}
       styles={{
         body: {
-          padding: screens.md ? '12px 14px 16px' : '14px 16px 18px',
+          padding: screens.md ? '16px' : '15px',
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
@@ -27,151 +30,188 @@ const CustomerSessionCard = memo(function CustomerSessionCard({ session, onRegis
       }}
       style={{
         height: '100%',
-        borderRadius: 12,
+        borderRadius: 16,
         background: T.white,
         border: `1px solid ${T.gray2}`,
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.025)',
         overflow: 'hidden',
         cursor: !isFull ? 'pointer' : 'default',
-        transition: 'all 0.3s ease',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: isFull ? 0.78 : 1,
       }}
     >
-      {/* Header: Mã lớp & Trạng thái */}
-      <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+      {/* ── Hàng 1: Mã lớp + Giờ học (Trái) & Badge trạng thái (Phải) ── */}
+      <Flex
+        justify="space-between"
+        align="center"
+        gap={8}
+        style={{ marginBottom: 14, flexWrap: 'nowrap' }}
+      >
+        <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
+          <span
+            className="session-tag-code"
+            style={{
+              backgroundColor: isFull ? '#8E8E93' : T.black,
+              color: T.white,
+              fontWeight: 700,
+              fontSize: 12,
+              letterSpacing: 0.3,
+              padding: '3px 9px',
+              borderRadius: 8,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: '18px',
+              flexShrink: 0,
+            }}
+          >
+            {session.classCode}
+          </span>
+
+          <span
+            className="session-time-slot"
+            style={{
+              fontSize: screens.md ? 14.5 : 14,
+              fontWeight: 700,
+              color: T.black,
+              letterSpacing: -0.3,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {session.timeSlot}
+          </span>
+        </Flex>
+
+        {/* Pill trạng thái */}
         <span
-          className="session-tag-code"
           style={{
-            backgroundColor: '#F3E8FF',
-            color: '#7E22CE',
-            border: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: !isFull ? '#ECFDF3' : '#F4F4F6',
+            color: !isFull ? '#15803D' : T.gray3,
+            padding: '3px 10px',
+            borderRadius: 999,
+            fontSize: 11.5,
             fontWeight: 600,
-            fontSize: screens.md ? 12 : 11,
-            letterSpacing: 0.4,
-            padding: '2px 8px',
-            borderRadius: '6px',
-            display: 'inline-block',
-            lineHeight: '18px',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          {session.classCode}
-        </span>
-        <Flex align="center" gap={4}>
           <span
             style={{
               width: 6,
               height: 6,
               borderRadius: '50%',
-              background: cfg.dot,
+              background: !isFull ? '#22C55E' : cfg.dot,
               display: 'inline-block',
               flexShrink: 0,
               animation: !isFull ? 'statusPulse 2s infinite ease-in-out' : 'none',
             }}
           />
-          <span
-            className="session-status-text"
-            style={{ fontSize: 10, color: cfg.textColor, fontWeight: 600, whiteSpace: 'nowrap' }}
-          >
-            {cfg.label}
-          </span>
-        </Flex>
+          {!isFull && remainingSeats > 0 ? `Còn ${remainingSeats} chỗ` : cfg.label}
+        </span>
       </Flex>
 
-      {/* Giờ học */}
+      {/* ── Hàng 2: Lịch các buổi học (Tối đa 4 buổi / 1 dòng, buổi thứ 5 tự động xuống dòng) ── */}
       <div
-        className="session-time-slot"
+        className="session-dates-grid"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 8,
-          fontSize: 13,
-          lineHeight: 1.4,
-        }}
-      >
-        <span style={{ color: T.gray3, fontSize: 13, flexShrink: 0 }}>Giờ học:</span>
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: T.black,
-            letterSpacing: -0.2,
-          }}
-        >
-          {session.timeSlot}
-        </span>
-      </div>
-
-      {/* Ngày học */}
-      <div
-        className="session-dates-row"
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 8,
-          marginBottom: 8,
-          fontSize: 13,
-          lineHeight: 1.4,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          columnGap: 6,
+          rowGap: 8,
+          marginBottom: 14,
           flex: 1,
+          alignContent: 'start',
         }}
       >
-        <span style={{ color: T.gray3, fontSize: 13, flexShrink: 0, paddingTop: 1 }}>
-          Ngày học:
-        </span>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-            flex: 1,
-          }}
-        >
-          {sortedDates.map((d, i) => (
-            <span
-              key={i}
-              className="session-date-tag"
+        {sortedDates.map((d, i) => (
+          <div
+            key={i}
+            className="session-date-box"
+            style={{
+              background: '#FAFAFC',
+              border: '1px solid #ECECEE',
+              borderRadius: 10,
+              padding: '6px 4px',
+              textAlign: 'center',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <div
               style={{
-                background: T.gray1,
+                fontSize: 10.5,
+                color: T.gray3,
+                fontWeight: 500,
+                lineHeight: 1.2,
+                marginBottom: 2,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Buổi {i + 1}
+            </div>
+            <div
+              style={{
+                fontSize: 12.5,
+                fontWeight: 700,
                 color: T.black,
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '2px 6px',
-                borderRadius: 4,
-                display: 'inline-block',
+                lineHeight: 1.25,
+                letterSpacing: -0.2,
                 whiteSpace: 'nowrap',
               }}
             >
               {dayjs(d).format('DD/MM')}
-            </span>
-          ))}
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Sĩ số */}
-      <div
-        className="session-capacity"
+      {/* ── Hàng 3: Footer Sĩ số (Trái) & CTA Đăng ký (Phải) ── */}
+      <Flex
+        justify="space-between"
+        align="center"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          fontSize: 13,
-          lineHeight: 1.4,
           marginTop: 'auto',
-          paddingTop: 8,
-          flexWrap: 'wrap',
+          paddingTop: 11,
+          borderTop: '1px solid #F2F2F7',
+          fontSize: 12.5,
+          lineHeight: 1.4,
         }}
       >
-        <span style={{ color: T.gray3, fontSize: 13, flexShrink: 0 }}>Sĩ số:</span>
-        <span style={{ color: T.black, fontWeight: 600, fontSize: 13 }}>
-          {session.currentBooked}/{session.maxCapacity}
+        <span style={{ color: T.gray3 }}>
+          Sĩ số:{' '}
+          <strong style={{ color: T.black, fontWeight: 600 }}>
+            {session.currentBooked}/{session.maxCapacity} học viên
+          </strong>
         </span>
-        {!isFull && (
-          <span style={{ color: T.gray3, fontSize: 12 }}>
-            (còn {session.maxCapacity - session.currentBooked})
+
+        {!isFull ? (
+          <span
+            className="session-card-cta"
+            style={{
+              color: '#7E22CE',
+              fontWeight: 600,
+              fontSize: 12.5,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'transform 0.2s ease, color 0.2s ease',
+            }}
+          >
+            Đăng ký
+            <ArrowRightOutlined className="session-card-cta-arrow" style={{ fontSize: 11, transition: 'transform 0.2s ease' }} />
+          </span>
+        ) : (
+          <span style={{ color: T.gray3, fontSize: 12, fontWeight: 500 }}>
+            {cfg.label}
           </span>
         )}
-      </div>
+      </Flex>
     </Card>
   );
 });
 
 export default CustomerSessionCard;
-
