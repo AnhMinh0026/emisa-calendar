@@ -163,9 +163,15 @@ export default function SessionDetailModal({
         key: "phone",
         width: 120,
         render: (val) => (
-          <Text code style={{ fontSize: 12 }}>
+          <span
+            style={{
+              fontSize: 12.5,
+              color: "#475569",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            }}
+          >
             {val}
-          </Text>
+          </span>
         ),
       },
       {
@@ -714,57 +720,43 @@ export default function SessionDetailModal({
             >
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
+                  <Text style={{ color: "#8E8E93", fontSize: 12 }}>
                     #{index + 1}
                   </Text>
-                  <Text strong style={{ fontSize: 14 }}>
+                  <Text strong style={{ fontSize: 14, color: "#1D1D1F" }}>
                     {student.name}
                   </Text>
                 </div>
-                <div style={{ marginTop: 4 }}>
-                  <Tag
-                    style={{
-                      margin: 0,
-                      fontSize: 11,
-                      background: "#fafafa",
-                      border: "1px solid #e8e8e8",
-                    }}
-                  >
-                    {student.phone}
-                  </Tag>
+                <div
+                  style={{
+                    marginTop: 2,
+                    fontSize: 12,
+                    color: "#6E6E73",
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                  }}
+                >
+                  {student.phone}
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    flexWrap: "wrap",
-                    justifyContent: "flex-end",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    gap: 3,
                   }}
                 >
-                  <Tag
-                    color="blue"
-                    style={{ margin: 0, fontWeight: 600, fontSize: 11 }}
-                  >
-                    Cọc: {fmtMoney(student.depositAmount ?? 0)}
-                  </Tag>
+                  <span style={{ fontSize: 12, color: "#52525B" }}>
+                    Cọc: <strong style={{ color: "#1D1D1F" }}>{fmtMoney(student.depositAmount ?? 0)}</strong>
+                  </span>
                   {student.isFullyPaid ? (
-                    <Tag
-                      color="success"
-                      style={{ margin: 0, fontWeight: 600, fontSize: 11 }}
-                    >
-                      ✓ Xong
-                    </Tag>
+                    <PaymentStatusTag isFullyPaid compact />
                   ) : (
-                    <Tag
-                      color="error"
-                      style={{ margin: 0, fontWeight: 600, fontSize: 11 }}
-                    >
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: "#B91C1C" }}>
                       Nợ: {fmtMoney(student.remainingAmount ?? 0)}
-                    </Tag>
+                    </span>
                   )}
                 </div>
                 <Popconfirm

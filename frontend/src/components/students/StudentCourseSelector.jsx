@@ -8,13 +8,11 @@ import {
   Empty,
   Grid,
   ConfigProvider,
-  Tag,
 } from "antd";
 import {
   SwapOutlined,
   CheckOutlined,
   ArrowRightOutlined,
-  TeamOutlined,
 } from "@ant-design/icons";
 import { T } from "../../constants";
 
@@ -70,12 +68,12 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
         size="small"
         style={{
           marginBottom: 16,
-          borderRadius: 10,
-          border: "1px solid #f0f0f0",
-          background: "#ffffff",
-          boxShadow: "0 1px 4px rgba(0, 0, 0, 0.04)",
+          borderRadius: 12,
+          border: "1px solid #ECECEE",
+          background: "#FFFFFF",
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
         }}
-        styles={{ body: { padding: !screens.md ? "12px 14px" : "12px 18px" } }}
+        styles={{ body: { padding: !screens.md ? "12px 14px" : "13px 18px" } }}
       >
         <Flex
           justify="space-between"
@@ -85,54 +83,58 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
         >
           <div style={{ minWidth: 0, flex: 1 }}>
             <Text
-              type="secondary"
-              style={{ fontSize: 11, display: "block", lineHeight: 1.2 }}
+              style={{
+                fontSize: 11.5,
+                color: "#8E8E93",
+                fontWeight: 500,
+                display: "block",
+                lineHeight: 1.2,
+              }}
             >
               Khóa học đang xem
             </Text>
-            <Flex align="center" gap={10} wrap="wrap" style={{ marginTop: 4 }}>
+            <Flex align="baseline" gap={12} wrap="wrap" style={{ marginTop: 4 }}>
               <Title
                 level={4}
                 style={{
                   margin: 0,
-                  color: "#262626",
+                  color: T.black,
                   lineHeight: 1.35,
-                  fontSize: !screens.md ? 17 : 20,
+                  fontSize: !screens.md ? 17 : 19,
+                  letterSpacing: -0.3,
                 }}
               >
                 {activeCampaign?.title ?? "—"}
               </Title>
 
               {activeCampaign && (
-                <Flex align="center" gap={6} wrap="wrap">
-                  <Tag
-                    icon={<TeamOutlined />}
-                    style={{
-                      margin: 0,
-                      borderRadius: 999,
-                      fontWeight: 600,
-                      fontSize: 12,
-                      padding: "1px 10px",
-                      background: "#F4F4F6",
-                      border: "none",
-                      color: T.black,
-                    }}
-                  >
-                    {activeStats.studentCount} học viên
-                  </Tag>
+                <Flex align="center" gap={10} wrap="wrap" style={{ fontSize: 13 }}>
+                  <span style={{ color: "#64748B" }}>
+                    Tổng:{" "}
+                    <strong style={{ color: "#0F172A" }}>
+                      {activeStats.studentCount} học viên
+                    </strong>
+                  </span>
                   {activeStats.unpaidCount > 0 && (
-                    <Tag
-                      color="warning"
+                    <span
                       style={{
-                        margin: 0,
-                        borderRadius: 999,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
                         fontWeight: 600,
-                        fontSize: 12,
-                        padding: "1px 10px",
+                        color: "#B45309",
                       }}
                     >
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: "#FEC90F",
+                        }}
+                      />
                       {activeStats.unpaidCount} còn nợ
-                    </Tag>
+                    </span>
                   )}
                 </Flex>
               )}
@@ -146,6 +148,11 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
             id="btn-choose-student-course"
             style={{
               flexShrink: 0,
+              borderRadius: 9,
+              fontWeight: 600,
+              color: "#1E4DB7",
+              borderColor: "#BFDBFE",
+              background: "#EBF3FE",
               width: !screens.md ? "100%" : "auto",
             }}
           >
@@ -154,7 +161,7 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
         </Flex>
       </Card>
 
-      <ConfigProvider theme={{ token: { colorPrimary: T.black } }}>
+      <ConfigProvider theme={{ token: { colorPrimary: "#1E4DB7" } }}>
         <Modal
           open={modalOpen}
           onCancel={() => setModalOpen(false)}
@@ -210,8 +217,9 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
                   textOverflow: "ellipsis",
                 }}
               >
-                Phân nhóm danh sách học viên theo từng khóa học, tháng và lớp
-                học
+                {isMobile
+                  ? "Chạm vào khóa học để xem học viên theo tháng"
+                  : "Phân nhóm danh sách học viên theo từng khóa học, tháng và lớp học"}
               </Text>
             </div>
           }
@@ -223,21 +231,19 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
             />
           ) : (
             <div
+              className="course-modal-list"
               style={{
                 display: "flex",
                 flexDirection: "column",
                 gap: isMobile ? 10 : 12,
                 maxHeight: "70vh",
                 overflowY: "auto",
-                padding: "2px",
+                padding: "4px 2px",
               }}
             >
               {campaigns.map((camp) => {
                 const isSelected = activeCampaignId === camp._id;
                 const stats = courseStatsMap[camp._id] ?? {
-                  studentCount: 0,
-                  unpaidCount: 0,
-                  sessionCount: 0,
                   months: [],
                 };
                 const rawMonths =
@@ -251,19 +257,18 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
                       onSelectCampaign(camp._id);
                       setModalOpen(false);
                     }}
-                    className={`course-modal-card ${isSelected ? "selected" : ""}`}
+                    className={`course-modal-card admin-course-modal-card ${isSelected ? "selected" : ""}`}
                     style={{
                       padding: isMobile ? "14px 14px" : "16px 20px",
                       borderRadius: isMobile ? 14 : 16,
-                      background: isSelected ? "#FAFAFC" : T.white,
+                      background: isSelected ? "#F4F8FF" : T.white,
                       border: isSelected
-                        ? `1.5px solid ${T.black}`
+                        ? "1.5px solid #1E4DB7"
                         : `1px solid ${T.gray2}`,
                       cursor: "pointer",
                       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
-                    {/* Hàng 1: Tên khóa học + Trạng thái Đang xem / Mũi tên */}
                     <Flex justify="space-between" align="center" gap={10}>
                       <Flex
                         align="center"
@@ -274,7 +279,7 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
                           strong
                           style={{
                             fontSize: isMobile ? 15 : 16,
-                            color: T.black,
+                            color: isSelected ? "#1E4DB7" : T.black,
                             letterSpacing: -0.3,
                             lineHeight: 1.35,
                             whiteSpace: "nowrap",
@@ -307,8 +312,8 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
                             style={{
                               fontSize: 11.5,
                               fontWeight: 600,
-                              color: T.black,
-                              background: "#EFEFF4",
+                              color: "#1E4DB7",
+                              background: "#EBF3FE",
                               padding: "2px 9px",
                               borderRadius: 999,
                             }}
@@ -322,8 +327,8 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
                             width: isMobile ? 26 : 28,
                             height: isMobile ? 26 : 28,
                             borderRadius: "50%",
-                            background: isSelected ? T.black : "#F4F4F6",
-                            color: isSelected ? T.white : T.black,
+                            background: isSelected ? "#1E4DB7" : "#F1F5F9",
+                            color: isSelected ? T.white : "#1E4DB7",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -340,116 +345,60 @@ const StudentCourseSelector = memo(function StudentCourseSelector({
                       </Flex>
                     </Flex>
 
-                    {/* Hàng 2: Danh sách tháng (Trái) & Số lượng học viên / lớp (Phải) */}
+                    {/* Hàng 2: Chỉ hiển thị các tháng đã tạo */}
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
-                        flexWrap: "nowrap",
-                        gap: 8,
-                        marginTop: isMobile ? 10 : 12,
-                        paddingTop: isMobile ? 9 : 10,
+                        marginTop: isMobile ? 9 : 11,
+                        paddingTop: isMobile ? 8 : 10,
                         borderTop: "1px solid #F2F2F7",
                         fontSize: isMobile ? 12.5 : 13,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          minWidth: 0,
-                          flex: 1,
-                        }}
-                      >
-                        {monthInfo ? (
-                          <>
-                            <span style={{ color: T.black, fontWeight: 600 }}>
-                              Tháng{" "}
-                              {monthInfo.items.map((item, index) => (
-                                <span key={item.raw}>
-                                  {item.mm}
-                                  {!monthInfo.sameYear && item.yyyy
-                                    ? `/${item.yyyy}`
-                                    : ""}
-                                  {index < monthInfo.items.length - 1 && (
-                                    <span
-                                      style={{
-                                        color: "#C7C7CC",
-                                        fontWeight: 400,
-                                        margin: "0 5px",
-                                      }}
-                                    >
-                                      ·
-                                    </span>
-                                  )}
-                                </span>
-                              ))}
-                            </span>
-                            {monthInfo.sameYear && monthInfo.year && (
-                              <span
-                                style={{
-                                  color: T.gray3,
-                                  fontWeight: 400,
-                                  marginLeft: 4,
-                                  fontSize: isMobile ? 12 : 12.5,
-                                }}
-                              >
-                                /{monthInfo.year}
+                      {monthInfo ? (
+                        <>
+                          <span style={{ color: T.black, fontWeight: 600 }}>
+                            Tháng{" "}
+                            {monthInfo.items.map((item, index) => (
+                              <span key={item.raw}>
+                                {item.mm}
+                                {!monthInfo.sameYear && item.yyyy
+                                  ? `/${item.yyyy}`
+                                  : ""}
+                                {index < monthInfo.items.length - 1 && (
+                                  <span
+                                    style={{
+                                      color: "#C7C7CC",
+                                      fontWeight: 400,
+                                      margin: "0 5px",
+                                    }}
+                                  >
+                                    ·
+                                  </span>
+                                )}
                               </span>
-                            )}
-                          </>
-                        ) : (
-                          <span style={{ color: T.gray3 }}>Chưa có tháng</span>
-                        )}
-                      </div>
-
-                      <Flex align="center" gap={6} style={{ flexShrink: 0 }}>
-                        {stats.unpaidCount > 0 && (
-                          <span
-                            style={{
-                              fontSize: isMobile ? 11.5 : 12,
-                              fontWeight: 600,
-                              color: "#D97706",
-                              background: "#FEF3C7",
-                              padding: "2px 8px",
-                              borderRadius: 999,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {stats.unpaidCount} còn nợ
+                            ))}
                           </span>
-                        )}
-                        <span
-                          style={{
-                            fontSize: isMobile ? 11.5 : 12,
-                            fontWeight: 600,
-                            color: "#15803D",
-                            background: "#F0FDF4",
-                            padding: "2px 9px",
-                            borderRadius: 999,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {stats.studentCount} học viên
-                        </span>
-                        <span
-                          style={{
-                            fontSize: isMobile ? 11.5 : 12,
-                            fontWeight: 500,
-                            color: T.gray3,
-                            background: "#F4F4F6",
-                            padding: "2px 8px",
-                            borderRadius: 999,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {stats.sessionCount} lớp
-                        </span>
-                      </Flex>
+                          {monthInfo.sameYear && monthInfo.year && (
+                            <span
+                              style={{
+                                color: T.gray3,
+                                fontWeight: 400,
+                                marginLeft: 4,
+                                fontSize: isMobile ? 12 : 12.5,
+                              }}
+                            >
+                              /{monthInfo.year}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: T.gray3 }}>Chưa có tháng</span>
+                      )}
                     </div>
                   </div>
                 );

@@ -1,39 +1,36 @@
 import { memo, useMemo, useRef, useEffect } from "react";
-import { Flex, Typography, Tag } from "antd";
+import { Flex, Typography } from "antd";
 import { CalendarOutlined } from "@ant-design/icons";
+import { T } from "../../constants";
 
 const { Text } = Typography;
 
 /**
- * Bảng màu hài hòa, dịu mắt cho Admin (Soft Blue / Slate — Không dùng màu đen nặng nề)
+ * Bảng màu tối giản chuẩn SaaS (Linear / Apple Minimalist)
  */
 const PALETTE = {
-  activeBg: "#ffffff", // Nền xanh lam cực dịu khi đang chọn
-  activeBorder: "#3B82F6", // Viền xanh lam tinh tế
-  activeText: "#1D4ED8", // Chữ xanh đậm rõ nét
-  activeBadgeBg: "#ffffff", // Badge đếm lớp nổi bật nhẹ nhàng
+  activeBg: "#1E4DB7",
+  activeBorder: "#1E4DB7",
+  activeText: "#FFFFFF",
+  activeBadgeBg: "rgba(255, 255, 255, 0.22)",
   activeBadgeText: "#FFFFFF",
 
   inactiveBg: "#FFFFFF",
   inactiveBorder: "#E2E8F0",
   inactiveText: "#334155",
-  inactiveBadgeBg: "#F1F5F9",
-  inactiveBadgeText: "#64748B",
+  inactiveBadgeBg: "#EBF3FE",
+  inactiveBadgeText: "#1E4DB7",
 
-  containerBg: "#F8FAFC", // Nền thanh chứa sáng và thoáng
-  containerBorder: "#E2E8F0",
-  yearBoxBg: "#EEF2F6",
-  yearActiveBg: "#FFFFFF",
-  yearActiveText: "#1E293B",
-  yearInactiveText: "#64748B",
+  containerBg: "#F8FAFC",
+  containerBorder: "#EEF2F6",
+  yearBoxBg: "#EBF3FE",
+  yearActiveBg: "#1E4DB7",
+  yearActiveText: "#FFFFFF",
+  yearInactiveText: "#1E4DB7",
 };
 
 /**
  * Thanh chọn Năm & Tháng khoa học cho trang Quản lý Lớp học (Tối ưu cho cả Web & Mobile)
- * - Tự động phân nhóm theo NĂM nếu khóa học kéo dài qua nhiều năm (VD: 2025, 2026, 2027)
- * - Không lặp lại '/2026' ở từng nút tháng giúp tiết kiệm diện tích và không rối mắt
- * - Tích hợp hiệu ứng Sticky bám dính mượt mà khi cuộn danh sách lớp học trên Mobile
- * - Tone màu Soft Blue / Slate hài hòa, đồng bộ với bảng quản trị
  */
 const SessionMonthBar = memo(function SessionMonthBar({
   sortedMonthKeys,
@@ -44,7 +41,6 @@ const SessionMonthBar = memo(function SessionMonthBar({
 }) {
   const activeTabRef = useRef(null);
 
-  // Phân tích danh sách tháng thành cấu trúc theo Năm: { '2026': [{ raw: '09/2026', mm: '09', yyyy: '2026' }, ...] }
   const { years, monthsByYear, allParsed } = useMemo(() => {
     const byYear = {};
     const parsedList = [];
@@ -62,20 +58,17 @@ const SessionMonthBar = memo(function SessionMonthBar({
     return { years: yearKeys, monthsByYear: byYear, allParsed: parsedList };
   }, [sortedMonthKeys]);
 
-  // Xác định năm đang chọn dựa trên selectedMonthKey
   const activeYear = useMemo(() => {
     if (!selectedMonthKey) return years[0] ?? "";
     const parts = String(selectedMonthKey).split("/");
     return parts[1] || years[0] || "";
   }, [selectedMonthKey, years]);
 
-  // Các tháng thuộc năm đang chọn
   const currentYearMonths = useMemo(
     () => monthsByYear[activeYear] ?? allParsed,
     [monthsByYear, activeYear, allParsed],
   );
 
-  // Tự động cuộn ngang mượt để đưa nút tháng đang chọn vào giữa khung nhìn
   useEffect(() => {
     if (activeTabRef.current) {
       activeTabRef.current.scrollIntoView({
@@ -88,7 +81,6 @@ const SessionMonthBar = memo(function SessionMonthBar({
 
   if (!sortedMonthKeys || sortedMonthKeys.length === 0) return null;
 
-  // Khi đổi Năm: tự động chuyển sang tháng đầu tiên có lớp (hoặc tháng đầu tiên) của năm đó
   const handleSelectYear = (yr) => {
     const monthsInYr = monthsByYear[yr] ?? [];
     if (monthsInYr.length === 0) return;
@@ -113,7 +105,7 @@ const SessionMonthBar = memo(function SessionMonthBar({
 
   const hasMultipleYears = years.length > 1;
 
-  // ── GIAO DIỆN MOBILE (Có hiệu ứng Sticky bám dính khi cuộn danh sách lớp) ──
+  // ── GIAO DIỆN MOBILE ──
   if (isMobile) {
     const useGrid = currentYearMonths.length <= 4;
 
@@ -121,17 +113,16 @@ const SessionMonthBar = memo(function SessionMonthBar({
       <div
         style={{
           position: "sticky",
-          top: 64, // Bám ngay bên dưới thanh Header (cao 64px) của MainLayout
+          top: 60,
           zIndex: 9,
           background: "rgba(255, 255, 255, 0.96)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           padding: "8px 4px 10px",
           margin: "0 -4px 12px",
-          borderBottom: "1px solid #f0f0f0",
+          borderBottom: "1px solid #EFEFF4",
         }}
       >
-        {/* Hàng 1 (Mobile): Chọn Năm (trải rộng 100%, không còn bị ép bởi dropdown) */}
         {hasMultipleYears && (
           <div
             className="mobile-month-pills-bar"
@@ -161,7 +152,7 @@ const SessionMonthBar = memo(function SessionMonthBar({
                       ? PALETTE.yearActiveBg
                       : "transparent",
                     color: isYrActive
-                      ? PALETTE.activeText
+                      ? PALETTE.yearActiveText
                       : PALETTE.yearInactiveText,
                     boxShadow: isYrActive
                       ? "0 1px 3px rgba(0,0,0,0.08)"
@@ -178,7 +169,6 @@ const SessionMonthBar = memo(function SessionMonthBar({
           </div>
         )}
 
-        {/* Hàng 2 (Mobile): Dải nút Tháng trong năm đang chọn */}
         <div
           className="mobile-month-pills-bar"
           style={{
@@ -218,9 +208,6 @@ const SessionMonthBar = memo(function SessionMonthBar({
                   border: isActive
                     ? `1.5px solid ${PALETTE.activeBorder}`
                     : `1px solid ${PALETTE.inactiveBorder}`,
-                  boxShadow: isActive
-                    ? "0 2px 8px rgba(59, 130, 246, 0.14)"
-                    : "0 1px 2px rgba(0, 0, 0, 0.02)",
                   transition: "all 0.2s ease",
                 }}
               >
@@ -244,7 +231,7 @@ const SessionMonthBar = memo(function SessionMonthBar({
                     fontSize: 11.5,
                     fontWeight: isActive ? 600 : 500,
                     color: isActive
-                      ? PALETTE.activeText
+                      ? "rgba(255, 255, 255, 0.85)"
                       : PALETTE.inactiveBadgeText,
                     whiteSpace: "nowrap",
                   }}
@@ -255,7 +242,7 @@ const SessionMonthBar = memo(function SessionMonthBar({
                         width: 5,
                         height: 5,
                         borderRadius: "50%",
-                        background: "#22C55E",
+                        background: isActive ? "#4ADE80" : "#22C55E",
                         flexShrink: 0,
                       }}
                     />
@@ -267,74 +254,56 @@ const SessionMonthBar = memo(function SessionMonthBar({
           })}
         </div>
 
-        {/* Hàng 3 (Mobile): Thanh tóm tắt trạng thái của tháng đang chọn */}
+        {/* Tóm tắt trạng thái tinh gọn không lạm dụng Tag */}
         <Flex
           justify="space-between"
           align="center"
           wrap="wrap"
           gap={8}
           style={{
-            background: "#FFFFFF",
+            background: "#FAFAFC",
             border: `1px solid ${PALETTE.inactiveBorder}`,
             borderRadius: 8,
-            padding: "7px 12px",
+            padding: "6px 12px",
+            fontSize: 12,
           }}
         >
-          <Text strong style={{ fontSize: 13, color: "#1E293B" }}>
+          <Text strong style={{ fontSize: 12.5, color: T.black }}>
             Tháng {selectedMonthKey}
           </Text>
 
-          <Flex align="center" gap={6} wrap="wrap">
-            <Tag
-              style={{
-                margin: 0,
-                fontSize: 11.5,
-                fontWeight: 600,
-                borderRadius: 6,
-                background: "#F1F5F9",
-                color: "#334155",
-                border: "none",
-              }}
-            >
-              Tổng: {totalInMonth} lớp
-            </Tag>
+          <Flex align="center" gap={10} wrap="wrap">
+            <span style={{ color: "#6E6E73" }}>
+              Tổng: <strong style={{ color: T.black }}>{totalInMonth}</strong>
+            </span>
             {openInMonth > 0 && (
-              <Tag
-                color="success"
+              <span
                 style={{
-                  margin: 0,
-                  fontSize: 11.5,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  color: "#15803D",
                   fontWeight: 600,
-                  borderRadius: 6,
                 }}
               >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: "#22C55E",
+                  }}
+                />
                 {openInMonth} mở
-              </Tag>
+              </span>
             )}
             {fullInMonth > 0 && (
-              <Tag
-                color="error"
-                style={{
-                  margin: 0,
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  borderRadius: 6,
-                }}
-              >
-                {fullInMonth} đầy
-              </Tag>
+              <span style={{ color: "#B91C1C", fontWeight: 600 }}>
+                • {fullInMonth} đầy
+              </span>
             )}
             {hiddenInMonth > 0 && (
-              <Tag
-                style={{
-                  margin: 0,
-                  fontSize: 11.5,
-                  borderRadius: 6,
-                  color: "#64748B",
-                }}
-              >
-                {hiddenInMonth} ẩn
-              </Tag>
+              <span style={{ color: "#8E8E93" }}>• {hiddenInMonth} ẩn</span>
             )}
           </Flex>
         </Flex>
@@ -349,8 +318,6 @@ const SessionMonthBar = memo(function SessionMonthBar({
         padding: "12px 16px",
         borderBottom: `1px solid ${PALETTE.containerBorder}`,
         background: PALETTE.containerBg,
-        borderTopLeftRadius: 10,
-        borderTopRightRadius: 10,
       }}
     >
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
@@ -388,10 +355,10 @@ const SessionMonthBar = memo(function SessionMonthBar({
                         ? PALETTE.yearActiveBg
                         : "transparent",
                       color: isYrActive
-                        ? PALETTE.activeText
+                        ? PALETTE.yearActiveText
                         : PALETTE.yearInactiveText,
                       boxShadow: isYrActive
-                        ? "0 1px 3px rgba(15, 23, 42, 0.08)"
+                        ? "0 1px 3px rgba(0, 0, 0, 0.08)"
                         : "none",
                       cursor: "pointer",
                       userSelect: "none",
@@ -422,19 +389,19 @@ const SessionMonthBar = memo(function SessionMonthBar({
                 gap: 5,
                 padding: "5px 10px",
                 borderRadius: 8,
-                background: "#EEF2F6",
-                color: "#475569",
+                background: "#EFEFF4",
+                color: "#52525B",
                 fontSize: 12.5,
                 fontWeight: 600,
                 flexShrink: 0,
               }}
             >
-              <CalendarOutlined style={{ fontSize: 12, color: "#64748B" }} />
+              <CalendarOutlined style={{ fontSize: 12, color: "#6E6E73" }} />
               <span>Năm {activeYear}</span>
             </div>
           )}
 
-          {/* Dải nút chọn Tháng (Cuộn ngang mượt mà, không lặp lại '/2026') */}
+          {/* Dải nút chọn Tháng */}
           <div
             className="mobile-month-pills-bar"
             style={{
@@ -450,9 +417,6 @@ const SessionMonthBar = memo(function SessionMonthBar({
             {currentYearMonths.map(({ raw, mm }) => {
               const mSessions = currentCampaignMonths[raw]?.sessions ?? [];
               const count = mSessions.length;
-              const openCount = mSessions.filter(
-                (s) => s.status === "open",
-              ).length;
               const isActive = raw === selectedMonthKey;
 
               return (
@@ -464,7 +428,7 @@ const SessionMonthBar = memo(function SessionMonthBar({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 7,
-                    padding: "6px 13px",
+                    padding: "5px 12px",
                     borderRadius: 9,
                     cursor: "pointer",
                     userSelect: "none",
@@ -477,15 +441,12 @@ const SessionMonthBar = memo(function SessionMonthBar({
                     border: isActive
                       ? `1.5px solid ${PALETTE.activeBorder}`
                       : `1px solid ${PALETTE.inactiveBorder}`,
-                    boxShadow: isActive
-                      ? "0 2px 8px rgba(59, 130, 246, 0.12)"
-                      : "0 1px 2px rgba(15, 23, 42, 0.02)",
                     transition: "all 0.18s ease",
                   }}
                 >
                   <span
                     style={{
-                      fontSize: 13.5,
+                      fontSize: 13,
                       fontWeight: isActive ? 700 : 600,
                       letterSpacing: -0.1,
                     }}
@@ -495,33 +456,12 @@ const SessionMonthBar = memo(function SessionMonthBar({
 
                   <span
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      padding: "1px 7px",
-                      borderRadius: 999,
-                      background: isActive
-                        ? PALETTE.activeBadgeBg
-                        : PALETTE.inactiveBadgeBg,
-                      color: isActive
-                        ? PALETTE.activeBadgeText
-                        : PALETTE.inactiveBadgeText,
+                      fontSize: 12,
+                      fontWeight: isActive ? 600 : 500,
+                      opacity: isActive ? 0.9 : 0.65,
                     }}
                   >
-                    {openCount > 0 && (
-                      <span
-                        style={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: "50%",
-                          background: isActive ? "#86EFAC" : "#22C55E",
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                    {count}
+                    ({count})
                   </span>
                 </div>
               );
@@ -529,63 +469,60 @@ const SessionMonthBar = memo(function SessionMonthBar({
           </div>
         </Flex>
 
-        {/* Bên phải: Cụm thống kê tháng đang xem */}
-        <Flex align="center" gap={6} wrap="wrap" style={{ flexShrink: 0 }}>
-          <Tag
-            style={{
-              margin: 0,
-              fontSize: 12,
-              fontWeight: 600,
-              borderRadius: 6,
-              padding: "2px 9px",
-              background: "#FFFFFF",
-              borderColor: "#E2E8F0",
-              color: "#334155",
-            }}
-          >
-            Tổng: {totalInMonth} lớp
-          </Tag>
+        {/* Bên phải: Cụm thống kê tháng đang xem bằng Typography + Dot tinh gọn */}
+        <Flex align="center" gap={12} wrap="wrap" style={{ flexShrink: 0, fontSize: 12.5 }}>
+          <span style={{ color: "#6E6E73" }}>
+            Tổng: <strong style={{ color: T.black }}>{totalInMonth} lớp</strong>
+          </span>
+
           {openInMonth > 0 && (
-            <Tag
-              color="success"
+            <span
               style={{
-                margin: 0,
-                fontSize: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                color: "#15803D",
                 fontWeight: 600,
-                borderRadius: 6,
-                padding: "2px 9px",
               }}
             >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#22C55E",
+                }}
+              />
               {openInMonth} đang mở
-            </Tag>
+            </span>
           )}
+
           {fullInMonth > 0 && (
-            <Tag
-              color="error"
+            <span
               style={{
-                margin: 0,
-                fontSize: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                color: "#B91C1C",
                 fontWeight: 600,
-                borderRadius: 6,
-                padding: "2px 9px",
               }}
             >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#EF4444",
+                }}
+              />
               {fullInMonth} đã đầy
-            </Tag>
+            </span>
           )}
+
           {hiddenInMonth > 0 && (
-            <Tag
-              style={{
-                margin: 0,
-                fontSize: 12,
-                fontWeight: 500,
-                borderRadius: 6,
-                padding: "2px 9px",
-                color: "#64748B",
-              }}
-            >
-              {hiddenInMonth} đang ẩn
-            </Tag>
+            <span style={{ color: "#8E8E93", fontWeight: 500 }}>
+              • {hiddenInMonth} đang ẩn
+            </span>
           )}
         </Flex>
       </Flex>

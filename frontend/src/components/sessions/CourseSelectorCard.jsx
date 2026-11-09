@@ -158,6 +158,11 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
             id="btn-choose-course"
             style={{
               flexShrink: 0,
+              borderRadius: 9,
+              fontWeight: 600,
+              color: "#1E4DB7",
+              borderColor: "#BFDBFE",
+              background: "#EBF3FE",
               width: !screens.md ? "100%" : "auto",
             }}
           >
@@ -166,7 +171,7 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
         </Flex>
       </Card>
 
-      <ConfigProvider theme={{ token: { colorPrimary: T.black } }}>
+      <ConfigProvider theme={{ token: { colorPrimary: "#1E4DB7" } }}>
         <Modal
           open={modalOpen}
           onCancel={() => setModalOpen(false)}
@@ -222,7 +227,9 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
                   textOverflow: "ellipsis",
                 }}
               >
-                Chạm vào khóa học để xem và quản lý danh sách các lớp theo tháng
+                {isMobile
+                  ? "Chạm vào khóa học để xem danh sách lớp theo tháng"
+                  : "Chạm vào khóa học để xem và quản lý danh sách các lớp theo tháng"}
               </Text>
             </div>
           }
@@ -234,25 +241,19 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
             />
           ) : (
             <div
+              className="course-modal-list"
               style={{
                 display: "flex",
                 flexDirection: "column",
                 gap: isMobile ? 10 : 12,
                 maxHeight: "70vh",
                 overflowY: "auto",
-                padding: "2px",
+                padding: "4px 2px",
               }}
             >
               {campaigns.map((camp) => {
                 const isSelected = activeCampaignId === camp._id;
                 const campGroup = groupedData[camp._id];
-                const allCampSessions = campGroup
-                  ? Object.values(campGroup.months).flatMap((m) => m.sessions)
-                  : [];
-                const sessionCount = allCampSessions.length;
-                const openCount = allCampSessions.filter(
-                  (s) => s.status === "open",
-                ).length;
 
                 const rawMonths =
                   camp.months?.length > 0
@@ -269,13 +270,13 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
                       onSelectCampaign(camp._id);
                       setModalOpen(false);
                     }}
-                    className={`course-modal-card ${isSelected ? "selected" : ""}`}
+                    className={`course-modal-card admin-course-modal-card ${isSelected ? "selected" : ""}`}
                     style={{
                       padding: isMobile ? "14px 14px" : "16px 20px",
                       borderRadius: isMobile ? 14 : 16,
-                      background: isSelected ? "#FAFAFC" : T.white,
+                      background: isSelected ? "#F4F8FF" : T.white,
                       border: isSelected
-                        ? `1.5px solid ${T.black}`
+                        ? "1.5px solid #1E4DB7"
                         : `1px solid ${T.gray2}`,
                       cursor: "pointer",
                       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -292,7 +293,7 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
                           strong
                           style={{
                             fontSize: isMobile ? 15 : 16,
-                            color: T.black,
+                            color: isSelected ? "#1E4DB7" : T.black,
                             letterSpacing: -0.3,
                             lineHeight: 1.35,
                             whiteSpace: "nowrap",
@@ -325,8 +326,8 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
                             style={{
                               fontSize: 11.5,
                               fontWeight: 600,
-                              color: T.black,
-                              background: "#EFEFF4",
+                              color: "#1E4DB7",
+                              background: "#EBF3FE",
                               padding: "2px 9px",
                               borderRadius: 999,
                             }}
@@ -340,8 +341,8 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
                             width: isMobile ? 26 : 28,
                             height: isMobile ? 26 : 28,
                             borderRadius: "50%",
-                            background: isSelected ? T.black : "#F4F4F6",
-                            color: isSelected ? T.white : T.black,
+                            background: isSelected ? "#1E4DB7" : "#F1F5F9",
+                            color: isSelected ? T.white : "#1E4DB7",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -358,132 +359,60 @@ const CourseSelectorCard = memo(function CourseSelectorCard({
                       </Flex>
                     </Flex>
 
-                    {/* Hàng 2: Mô tả ngắn (nếu có) */}
-                    {camp.description?.trim() && (
-                      <Text
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          color: "#6E6E73",
-                          fontSize: isMobile ? 12.5 : 13,
-                          lineHeight: 1.45,
-                          marginTop: 4,
-                        }}
-                      >
-                        {camp.description}
-                      </Text>
-                    )}
-
-                    {/* Hàng 3: Danh sách tháng (Trái) & Số lượng lớp (Phải) trên 1 dòng */}
+                    {/* Hàng 2: Chỉ hiển thị các tháng đã tạo (Không hiển thị mô tả & các pill thừa) */}
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
-                        flexWrap: "nowrap",
-                        gap: 8,
-                        marginTop: isMobile ? 10 : 12,
-                        paddingTop: isMobile ? 9 : 10,
+                        marginTop: isMobile ? 9 : 11,
+                        paddingTop: isMobile ? 8 : 10,
                         borderTop: "1px solid #F2F2F7",
                         fontSize: isMobile ? 12.5 : 13,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          minWidth: 0,
-                          flex: 1,
-                        }}
-                      >
-                        {monthInfo ? (
-                          <>
-                            <span style={{ color: T.black, fontWeight: 600 }}>
-                              Tháng{" "}
-                              {monthInfo.items.map((item, index) => (
-                                <span key={item.raw}>
-                                  {item.mm}
-                                  {!monthInfo.sameYear && item.yyyy
-                                    ? `/${item.yyyy}`
-                                    : ""}
-                                  {index < monthInfo.items.length - 1 && (
-                                    <span
-                                      style={{
-                                        color: "#C7C7CC",
-                                        fontWeight: 400,
-                                        margin: "0 5px",
-                                      }}
-                                    >
-                                      ·
-                                    </span>
-                                  )}
-                                </span>
-                              ))}
-                            </span>
-                            {monthInfo.sameYear && monthInfo.year && (
-                              <span
-                                style={{
-                                  color: T.gray3,
-                                  fontWeight: 400,
-                                  marginLeft: 4,
-                                  fontSize: isMobile ? 12 : 12.5,
-                                }}
-                              >
-                                /{monthInfo.year}
+                      {monthInfo ? (
+                        <>
+                          <span style={{ color: T.black, fontWeight: 600 }}>
+                            Tháng{" "}
+                            {monthInfo.items.map((item, index) => (
+                              <span key={item.raw}>
+                                {item.mm}
+                                {!monthInfo.sameYear && item.yyyy
+                                  ? `/${item.yyyy}`
+                                  : ""}
+                                {index < monthInfo.items.length - 1 && (
+                                  <span
+                                    style={{
+                                      color: "#C7C7CC",
+                                      fontWeight: 400,
+                                      margin: "0 5px",
+                                    }}
+                                  >
+                                    ·
+                                  </span>
+                                )}
                               </span>
-                            )}
-                          </>
-                        ) : (
-                          <span style={{ color: T.gray3 }}>Chưa có tháng</span>
-                        )}
-                      </div>
-
-                      <Flex align="center" gap={6} style={{ flexShrink: 0 }}>
-                        {openCount > 0 && (
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                              fontSize: isMobile ? 11.5 : 12,
-                              fontWeight: 600,
-                              color: "#15803D",
-                              background: "#F0FDF4",
-                              padding: "2px 8px",
-                              borderRadius: 999,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
+                            ))}
+                          </span>
+                          {monthInfo.sameYear && monthInfo.year && (
                             <span
                               style={{
-                                width: 5,
-                                height: 5,
-                                borderRadius: "50%",
-                                background: T.green,
+                                color: T.gray3,
+                                fontWeight: 400,
+                                marginLeft: 4,
+                                fontSize: isMobile ? 12 : 12.5,
                               }}
-                            />
-                            {openCount} mở
-                          </span>
-                        )}
-                        <span
-                          style={{
-                            fontSize: isMobile ? 11.5 : 12,
-                            fontWeight: 600,
-                            color: T.black,
-                            background: "#F4F4F6",
-                            padding: "2px 9px",
-                            borderRadius: 999,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {sessionCount} lớp
-                        </span>
-                      </Flex>
+                            >
+                              /{monthInfo.year}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: T.gray3 }}>Chưa có tháng</span>
+                      )}
                     </div>
                   </div>
                 );

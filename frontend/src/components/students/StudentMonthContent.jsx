@@ -1,93 +1,138 @@
 import { memo, useState, useMemo } from 'react';
 import {
-  Table, Button, Space, Popconfirm, Typography, Tooltip, Tag, Flex, Empty, Switch,
+  App, Table, Button, Space, Popconfirm, Dropdown, Typography, Tooltip, Flex, Empty, Switch,
 } from 'antd';
 import {
-  EditOutlined, DeleteOutlined, PlusOutlined, PhoneOutlined, ClockCircleOutlined, CalendarOutlined,
+  EditOutlined, DeleteOutlined, PlusOutlined, MenuOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { T } from '../../constants';
 import { fmtMoney } from '../../utils/formatters';
 import { ClassCodeTag, PaymentStatusTag, SessionStatusTag } from '../common/StatusTags';
 
 const { Text } = Typography;
 
 /**
- * Thẻ hiển thị 1 học viên trên giao diện Mobile (bên trong khối Lớp học)
+ * Dòng hiển thị 1 học viên trên giao diện Mobile (bên trong khối Lớp học)
+ * Bố cục 2 cột Trái (Tên + SĐT) - Phải (Trạng thái nợ + Tiền cọc) kèm nút menu ☰ tinh gọn
  */
 const MobileStudentRow = memo(function MobileStudentRow({ st, idx, onEdit, onDelete }) {
+  const { modal } = App.useApp();
+
+  const actionItems = [
+    {
+      key: 'edit',
+      icon: <EditOutlined />,
+      label: <span id={`btn-edit-student-mob-${st._id}`}>Chỉnh sửa học viên</span>,
+      onClick: () => onEdit(st),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'delete',
+      danger: true,
+      icon: <DeleteOutlined />,
+      label: <span id={`btn-delete-student-mob-${st._id}`}>Xóa học viên</span>,
+      onClick: () => {
+        modal.confirm({
+          title: 'Xác nhận xóa',
+          content: `Bạn chắc chắn muốn xóa học viên "${st.name}"?`,
+          okText: 'Xóa',
+          okButtonProps: { danger: true },
+          cancelText: 'Hủy',
+          centered: true,
+          onOk: () => onDelete(st),
+        });
+      },
+    },
+  ];
+
   return (
     <div
       style={{
-        padding: '10px 12px',
-        borderTop: idx === 0 ? 'none' : '1px solid #f0f0f0',
-        background: '#fff',
+        padding: '11px 12px 11px 14px',
+        borderTop: idx === 0 ? 'none' : '1px solid #F1F5F9',
+        background: '#FFFFFF',
       }}
     >
-      <Flex justify="space-between" align="flex-start" gap={8}>
+      <Flex justify="space-between" align="center" gap={8}>
+        {/* Cột trái: Họ tên & Số điện thoại (+ ghi chú nếu có) */}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <Flex align="center" gap={6} wrap="wrap">
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              #{idx + 1}
-            </Text>
-            <Text strong style={{ fontSize: 14, color: '#1f1f1f' }}>
-              {st.name}
-            </Text>
-            <Text code style={{ fontSize: 11.5 }}>
-              <PhoneOutlined style={{ marginRight: 3, color: '#888' }} />
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              color: T.black,
+              lineHeight: 1.35,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {st.name}
+          </div>
+          <div
+            style={{
+              marginTop: 2,
+              fontSize: 12.5,
+              color: '#64748B',
+              lineHeight: 1.35,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
               {st.phone}
-            </Text>
-          </Flex>
-
-          <Flex align="center" gap={6} wrap="wrap" style={{ marginTop: 6 }}>
-            <Tag color="blue" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
-              Cọc: {fmtMoney(st.depositAmount)}
-            </Tag>
-            {st.isFullyPaid ? (
-              <Tag color="success" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
-                ✓ Đã đóng xong
-              </Tag>
-            ) : (
-              <Tag color="error" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
-                Nợ: {fmtMoney(st.remainingAmount)}
-              </Tag>
-            )}
+            </span>
             {st.paymentNote && (
-              <Text
-                type="secondary"
-                style={{ fontSize: 11.5, fontStyle: 'italic' }}
-              >
+              <span style={{ color: '#94A3B8', fontSize: 12 }}>
                 • {st.paymentNote}
-              </Text>
+              </span>
             )}
-          </Flex>
+          </div>
         </div>
 
-        <Space size={2} style={{ flexShrink: 0 }}>
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(st)}
-            id={`btn-edit-student-mob-${st._id}`}
-          />
-          <Popconfirm
-            title="Xác nhận xóa"
-            description={`Xóa học viên "${st.name}"?`}
-            onConfirm={() => onDelete(st)}
-            okText="Xóa"
-            okButtonProps={{ danger: true }}
-            cancelText="Hủy"
+        {/* Cột phải: Học phí (Nợ / Đã đóng đủ + Đã cọc) & Nút Menu ☰ */}
+        <Flex align="center" gap={6} style={{ flexShrink: 0 }}>
+          <div style={{ textAlign: 'right', lineHeight: 1.35 }}>
+            {st.isFullyPaid ? (
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#15803D' }}>
+                Đã đóng đủ
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#DC2626' }}>
+                Nợ {fmtMoney(st.remainingAmount)}
+              </div>
+            )}
+            <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}>
+              Cọc {fmtMoney(st.depositAmount)}
+            </div>
+          </div>
+
+          <Dropdown
+            menu={{ items: actionItems }}
+            trigger={['click']}
             placement="bottomRight"
           >
             <Button
               type="text"
-              danger
               size="small"
-              icon={<DeleteOutlined />}
-              id={`btn-delete-student-mob-${st._id}`}
+              icon={<MenuOutlined style={{ fontSize: 13.5, color: '#64748B' }} />}
+              id={`btn-actions-student-mob-${st._id}`}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             />
-          </Popconfirm>
-        </Space>
+          </Dropdown>
+        </Flex>
       </Flex>
     </div>
   );
@@ -109,107 +154,213 @@ const ClassStudentSection = memo(function ClassStudentSection({
   const sortedDates = [...(session.studyDates ?? [])].sort((a, b) => new Date(a) - new Date(b));
   const canAddMore =
     session.status === 'open' && (session.currentBooked ?? 0) < (session.maxCapacity ?? 0);
+  const isFull = (session.currentBooked ?? 0) >= (session.maxCapacity ?? 0);
 
   return (
     <div
       style={{
-        border: '1px solid #e8e8e8',
-        borderRadius: 10,
-        background: '#fff',
+        border: '1px solid #ECECEE',
+        borderRadius: 12,
+        background: '#FFFFFF',
         overflow: 'hidden',
-        marginBottom: 16,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+        marginBottom: 14,
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
       }}
     >
       {/* Header của Lớp học */}
       <div
         style={{
-          background: '#fafafa',
-          padding: isMobile ? '10px 12px' : '10px 16px',
-          borderBottom: students.length > 0 ? '1px solid #f0f0f0' : 'none',
+          background: '#F8FAFC',
+          padding: isMobile ? '10px 12px' : '11px 16px',
+          borderBottom: '1px solid #EEF2F6',
         }}
       >
-        <Flex
-          justify="space-between"
-          align={isMobile ? 'flex-start' : 'center'}
-          vertical={isMobile}
-          gap={isMobile ? 8 : 12}
-        >
-          {/* Cụm thông tin lớp bên trái */}
-          <Flex align="center" gap={10} wrap="wrap">
-            <ClassCodeTag code={session.classCode} fontSize={13} />
-            <SessionStatusTag status={session.status} />
-            {session.isHidden && (
-              <Tag style={{ margin: 0, fontSize: 11, color: '#8c8c8c' }}>Đang ẩn Public</Tag>
-            )}
+        {isMobile ? (
+          /* Header Mobile tinh gọn: Hàng 1 (Mã lớp + Giờ học | Sĩ số + Nút thêm), Hàng 2 (Ngày học) */
+          <div>
+            <Flex justify="space-between" align="center" gap={8}>
+              <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
+                <ClassCodeTag
+                  code={session.classCode}
+                  fontSize={12}
+                  muted={session.status !== 'open'}
+                />
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13.5,
+                    color: T.black,
+                    letterSpacing: -0.2,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {session.timeSlot}
+                </span>
+                {session.isHidden && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: '#64748B',
+                      background: '#E2E8F0',
+                      padding: '1px 6px',
+                      borderRadius: 5,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Đang ẩn
+                  </span>
+                )}
+              </Flex>
 
-            <Flex align="center" gap={4} style={{ fontSize: 12.5, color: '#595959' }}>
-              <ClockCircleOutlined style={{ color: '#8c8c8c' }} />
-              <Text strong style={{ fontSize: 12.5 }}>
-                {session.timeSlot}
-              </Text>
+              <Flex align="center" gap={8} style={{ flexShrink: 0 }}>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: isFull ? '#B91C1C' : '#475569',
+                    background: isFull ? '#FEF2F2' : '#EEF2F6',
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                  }}
+                >
+                  {session.currentBooked}/{session.maxCapacity} HV
+                </span>
+
+                {canAddMore && (
+                  <Button
+                    size="small"
+                    icon={<PlusOutlined style={{ fontSize: 11 }} />}
+                    onClick={() => onAddStudentToClass(session._id)}
+                    style={{
+                      height: 24,
+                      padding: '0 8px',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      borderColor: '#BFDBFE',
+                      background: '#EBF3FE',
+                      color: '#1E4DB7',
+                    }}
+                  >
+                    Thêm
+                  </Button>
+                )}
+              </Flex>
             </Flex>
 
             {sortedDates.length > 0 && (
-              <Flex align="center" gap={4} style={{ fontSize: 12.5, color: '#595959' }}>
-                <CalendarOutlined style={{ color: '#8c8c8c' }} />
-                <span>
-                  {sortedDates.map((d) => dayjs(d).format('DD/MM')).join(' · ')}
-                </span>
-              </Flex>
-            )}
-          </Flex>
-
-          {/* Cụm thống kê sĩ số & nút thêm nhanh bên phải */}
-          <Flex
-            align="center"
-            justify={isMobile ? 'space-between' : 'flex-end'}
-            gap={8}
-            wrap="wrap"
-            style={{ width: isMobile ? '100%' : 'auto' }}
-          >
-            <Space size={6} wrap>
-              <Tag
+              <div
                 style={{
-                  margin: 0,
-                  fontWeight: 600,
+                  marginTop: 5,
                   fontSize: 12,
-                  background: '#fff',
-                  borderColor: '#d9d9d9',
+                  color: '#64748B',
+                  lineHeight: 1.3,
                 }}
               >
-                Sĩ số:{' '}
+                Lịch học: <span style={{ color: '#334155', fontWeight: 500 }}>
+                  {sortedDates.map((d) => dayjs(d).format('DD/MM')).join(' · ')}
+                </span>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Header Desktop đầy đủ */
+          <Flex justify="space-between" align="center" gap={12}>
+            <Flex align="center" gap={10} wrap="wrap">
+              <ClassCodeTag
+                code={session.classCode}
+                fontSize={12.5}
+                muted={session.status !== 'open'}
+              />
+
+              <span style={{ fontWeight: 700, fontSize: 13.5, color: T.black, letterSpacing: -0.2 }}>
+                {session.timeSlot}
+              </span>
+
+              {sortedDates.length > 0 && (
+                <>
+                  <span style={{ color: '#D1D1D6' }}>|</span>
+                  <span style={{ fontSize: 12.5, color: '#52525B', fontWeight: 500 }}>
+                    {sortedDates.map((d) => dayjs(d).format('DD/MM')).join(' · ')}
+                  </span>
+                </>
+              )}
+
+              <SessionStatusTag status={session.status} />
+
+              {session.isHidden && (
                 <span
                   style={{
-                    color:
-                      session.currentBooked >= session.maxCapacity ? '#cf1322' : '#389e0d',
+                    fontSize: 11.5,
+                    color: '#6E6E73',
+                    background: '#EFEFF4',
+                    padding: '1px 8px',
+                    borderRadius: 6,
                   }}
                 >
-                  {session.currentBooked}
+                  Đang ẩn Public
                 </span>
-                /{session.maxCapacity}
-              </Tag>
-
-              {unpaidCount > 0 && (
-                <Tag color="warning" style={{ margin: 0, fontWeight: 600, fontSize: 12 }}>
-                  {unpaidCount} còn nợ
-                </Tag>
               )}
-            </Space>
+            </Flex>
 
-            {canAddMore && (
-              <Button
-                type="dashed"
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => onAddStudentToClass(session._id)}
-                style={{ fontSize: 12, borderRadius: 6 }}
-              >
-                Thêm vào {session.classCode}
-              </Button>
-            )}
+            <Flex align="center" justify="flex-end" gap={12} wrap="wrap" style={{ fontSize: 12.5 }}>
+              <Flex align="center" gap={10}>
+                <span style={{ color: '#6E6E73' }}>
+                  Sĩ số:{' '}
+                  <strong
+                    style={{
+                      color: isFull ? '#B91C1C' : T.black,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {session.currentBooked}
+                  </strong>
+                  /{session.maxCapacity}
+                </span>
+
+                {unpaidCount > 0 && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      color: '#B45309',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#F59E0B',
+                      }}
+                    />
+                    {unpaidCount} còn nợ
+                  </span>
+                )}
+              </Flex>
+
+              {canAddMore && (
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => onAddStudentToClass(session._id)}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 7,
+                    borderColor: '#BFDBFE',
+                    background: '#EBF3FE',
+                    color: '#1E4DB7',
+                  }}
+                >
+                  Thêm vào {session.classCode}
+                </Button>
+              )}
+            </Flex>
           </Flex>
-        </Flex>
+        )}
       </div>
 
       {/* Danh sách học viên trong lớp */}
@@ -218,7 +369,7 @@ const ClassStudentSection = memo(function ClassStudentSection({
           style={{
             padding: '18px 16px',
             textAlign: 'center',
-            color: '#8c8c8c',
+            color: '#8E8E93',
             fontSize: 13,
           }}
         >
@@ -264,14 +415,12 @@ const StudentMonthContent = memo(function StudentMonthContent({
   const [selectedClassId, setSelectedClassId] = useState('ALL');
   const [showEmptyClasses, setShowEmptyClasses] = useState(false);
 
-  // Đảm bảo selectedClassId hợp lệ khi đổi tháng
   const activeClassId = useMemo(() => {
     if (selectedClassId === 'ALL') return 'ALL';
     const exists = sessionGroups.some((g) => g.session._id === selectedClassId);
     return exists ? selectedClassId : 'ALL';
   }, [selectedClassId, sessionGroups]);
 
-  // Lọc danh sách lớp hiển thị trong tháng
   const visibleGroups = useMemo(() => {
     let list = sessionGroups;
     if (activeClassId !== 'ALL') {
@@ -279,7 +428,6 @@ const StudentMonthContent = memo(function StudentMonthContent({
     }
     if (!showEmptyClasses || hasActiveFilter) {
       const withStudents = list.filter((g) => g.students.length > 0);
-      // Nếu tất cả các lớp trong tháng đều trống thì vẫn hiện để admin biết
       if (withStudents.length > 0 || hasActiveFilter) {
         return withStudents;
       }
@@ -297,7 +445,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
     [sessionGroups]
   );
 
-  // Cột bảng học viên bên trong từng lớp (Không cần cột Lớp đang học lặp lại)
+  // Cột bảng học viên bên trong từng lớp
   const columns = useMemo(
     () => [
       {
@@ -306,7 +454,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
         width: 55,
         align: 'center',
         render: (_, __, idx) => (
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text style={{ fontSize: 12, color: '#8E8E93' }}>
             {idx + 1}
           </Text>
         ),
@@ -317,7 +465,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
         key: 'name',
         width: 220,
         render: (val) => (
-          <Text strong style={{ fontSize: 13 }}>
+          <Text strong style={{ fontSize: 13.5, color: T.black }}>
             {val}
           </Text>
         ),
@@ -328,9 +476,15 @@ const StudentMonthContent = memo(function StudentMonthContent({
         key: 'phone',
         width: 135,
         render: (val) => (
-          <Text code style={{ fontSize: 12 }}>
+          <span
+            style={{
+              fontSize: 12.5,
+              color: '#475569',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            }}
+          >
             {val}
-          </Text>
+          </span>
         ),
       },
       {
@@ -340,7 +494,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
         width: 125,
         align: 'right',
         render: (val) => (
-          <Text style={{ color: '#1677ff', fontWeight: 600, fontSize: 12.5 }}>
+          <Text style={{ color: T.black, fontWeight: 600, fontSize: 13 }}>
             {fmtMoney(val)}
           </Text>
         ),
@@ -356,9 +510,9 @@ const StudentMonthContent = memo(function StudentMonthContent({
           return (
             <Text
               style={{
-                color: n > 0 ? '#cf1322' : '#8c8c8c',
+                color: n > 0 ? '#B91C1C' : '#94A3B8',
                 fontWeight: n > 0 ? 600 : 400,
-                fontSize: 12.5,
+                fontSize: 13,
               }}
             >
               {fmtMoney(n)}
@@ -370,7 +524,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
         title: 'Trạng thái',
         dataIndex: 'isFullyPaid',
         key: 'isFullyPaid',
-        width: 135,
+        width: 140,
         align: 'center',
         render: (val) => <PaymentStatusTag isFullyPaid={val} />,
       },
@@ -379,7 +533,12 @@ const StudentMonthContent = memo(function StudentMonthContent({
         dataIndex: 'paymentNote',
         key: 'paymentNote',
         ellipsis: true,
-        render: (val) => val || <Text type="secondary">—</Text>,
+        render: (val) =>
+          val ? (
+            <span style={{ color: '#6E6E73', fontSize: 12.5 }}>{val}</span>
+          ) : (
+            <Text type="secondary">—</Text>
+          ),
       },
       {
         title: 'Thao tác',
@@ -388,7 +547,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
         align: 'center',
         fixed: 'right',
         render: (_, record) => (
-          <Space size={4}>
+          <Space size={2}>
             <Tooltip title="Chỉnh sửa">
               <Button
                 type="text"
@@ -426,7 +585,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
 
   return (
     <div style={{ paddingTop: 4 }}>
-      {/* Thanh chọn nhanh Lớp học (Class Pills) trong tháng */}
+      {/* Thanh lọc nhanh theo Lớp học dạng Segmented vuông vắn, chuyên nghiệp */}
       <Flex
         justify="space-between"
         align="center"
@@ -436,27 +595,35 @@ const StudentMonthContent = memo(function StudentMonthContent({
       >
         <div
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 4,
+            background: '#F1F5F9',
+            padding: 4,
+            borderRadius: 8,
             overflowX: 'auto',
-            paddingBottom: 2,
             maxWidth: '100%',
           }}
         >
-          <Button
-            size="small"
-            type={activeClassId === 'ALL' ? 'primary' : 'default'}
+          <div
             onClick={() => setSelectedClassId('ALL')}
             style={{
-              borderRadius: 999,
-              fontWeight: activeClassId === 'ALL' ? 600 : 400,
+              padding: '5px 12px',
+              borderRadius: 6,
+              fontWeight: activeClassId === 'ALL' ? 600 : 500,
               fontSize: 12.5,
+              cursor: 'pointer',
+              userSelect: 'none',
               flexShrink: 0,
+              background: activeClassId === 'ALL' ? '#FFFFFF' : 'transparent',
+              color: activeClassId === 'ALL' ? '#1E4DB7' : '#475569',
+              boxShadow:
+                activeClassId === 'ALL' ? '0 1px 2px rgba(15, 23, 42, 0.08)' : 'none',
+              transition: 'all 0.15s ease',
             }}
           >
-            Tất cả lớp ({totalMonthStudents} HV)
-          </Button>
+            Tất cả lớp ({totalMonthStudents})
+          </div>
 
           {sessionGroups.map(({ session, students }) => {
             if (!showEmptyClasses && students.length === 0 && activeClassId !== session._id) {
@@ -464,20 +631,28 @@ const StudentMonthContent = memo(function StudentMonthContent({
             }
             const isSelected = activeClassId === session._id;
             return (
-              <Button
+              <div
                 key={session._id}
-                size="small"
-                type={isSelected ? 'primary' : 'default'}
                 onClick={() => setSelectedClassId(session._id)}
                 style={{
-                  borderRadius: 999,
+                  padding: '5px 12px',
+                  borderRadius: 6,
                   fontWeight: isSelected ? 600 : 500,
                   fontSize: 12.5,
+                  cursor: 'pointer',
+                  userSelect: 'none',
                   flexShrink: 0,
+                  background: isSelected ? '#FFFFFF' : 'transparent',
+                  color: isSelected ? '#1E4DB7' : '#475569',
+                  boxShadow: isSelected ? '0 1px 2px rgba(15, 23, 42, 0.08)' : 'none',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                {session.classCode} ({students.length}/{session.maxCapacity})
-              </Button>
+                {session.classCode}{' '}
+                <span style={{ opacity: 0.75, fontWeight: 400 }}>
+                  ({students.length}/{session.maxCapacity})
+                </span>
+              </div>
             );
           })}
         </div>
@@ -485,7 +660,7 @@ const StudentMonthContent = memo(function StudentMonthContent({
         {/* Tuỳ chọn hiện cả các lớp chưa có học viên */}
         {emptyClassCount > 0 && activeClassId === 'ALL' && !hasActiveFilter && (
           <Flex align="center" gap={6} style={{ flexShrink: 0 }}>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text style={{ fontSize: 12, color: '#6E6E73' }}>
               Hiện lớp trống ({emptyClassCount})
             </Text>
             <Switch
@@ -525,4 +700,3 @@ const StudentMonthContent = memo(function StudentMonthContent({
 });
 
 export default StudentMonthContent;
-

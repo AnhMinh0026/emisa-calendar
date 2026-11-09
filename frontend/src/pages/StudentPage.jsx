@@ -1,15 +1,14 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import {
-  Input, Select, App, Col, Grid, Tabs, Empty, Card,
-} from 'antd';
-import api from '../services/api';
-import { PAYMENT_STATUS_OPTIONS } from '../constants';
-import useDebounce from '../hooks/useDebounce';
-import PageHeader from '../components/common/PageHeader';
-import FilterToolbar from '../components/common/FilterToolbar';
-import StudentCourseSelector from '../components/students/StudentCourseSelector';
-import StudentMonthContent from '../components/students/StudentMonthContent';
-import StudentFormModal from '../components/students/StudentFormModal';
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Input, Select, App, Col, Grid, Empty, Card } from "antd";
+import api from "../services/api";
+import { PAYMENT_STATUS_OPTIONS } from "../constants";
+import useDebounce from "../hooks/useDebounce";
+import PageHeader from "../components/common/PageHeader";
+import FilterToolbar from "../components/common/FilterToolbar";
+import StudentCourseSelector from "../components/students/StudentCourseSelector";
+import StudentMonthBar from "../components/students/StudentMonthBar";
+import StudentMonthContent from "../components/students/StudentMonthContent";
+import StudentFormModal from "../components/students/StudentFormModal";
 
 export default function StudentPage() {
   const { message, modal } = App.useApp();
@@ -18,15 +17,15 @@ export default function StudentPage() {
 
   // ── State dữ liệu (Khởi tạo từ SWR Cache giúp chuyển trang tức thì) ────────
   const [students, setStudents] = useState(
-    () => api.getCached('/students')?.data ?? []
+    () => api.getCached("/students")?.data ?? [],
   );
   const [sessions, setSessions] = useState(
-    () => api.getCached('/sessions')?.data ?? []
+    () => api.getCached("/sessions")?.data ?? [],
   );
   const [campaigns, setCampaigns] = useState(
-    () => api.getCached('/campaigns')?.data ?? []
+    () => api.getCached("/campaigns")?.data ?? [],
   );
-  const [loading, setLoading] = useState(() => !api.getCached('/students'));
+  const [loading, setLoading] = useState(() => !api.getCached("/students"));
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -35,7 +34,7 @@ export default function StudentPage() {
   // ── State Chọn Khóa học, Tháng & Bộ lọc ────────────────────────────────────
   const [chosenCampaignId, setChosenCampaignId] = useState(null);
   const [selectedMonthKey, setSelectedMonthKey] = useState(null);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 200);
   const [filterPaid, setFilterPaid] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -45,9 +44,13 @@ export default function StudentPage() {
     async (forceRefresh = false) => {
       try {
         const [studentsRes, sessionsRes, campaignsRes] = await Promise.all([
-          api.fetchCached('/students', { force: forceRefresh }),
-          api.fetchCached('/sessions', { force: forceRefresh }).catch(() => null),
-          api.fetchCached('/campaigns', { force: forceRefresh }).catch(() => null),
+          api.fetchCached("/students", { force: forceRefresh }),
+          api
+            .fetchCached("/sessions", { force: forceRefresh })
+            .catch(() => null),
+          api
+            .fetchCached("/campaigns", { force: forceRefresh })
+            .catch(() => null),
         ]);
         if (studentsRes?.data) setStudents(studentsRes.data);
         if (sessionsRes?.data) setSessions(sessionsRes.data);
@@ -56,21 +59,21 @@ export default function StudentPage() {
         message.error(
           err.response?.data?.message ||
             err.message ||
-            'Không thể tải danh sách học viên.'
+            "Không thể tải danh sách học viên.",
         );
       } finally {
         setLoading(false);
       }
     },
-    [message]
+    [message],
   );
 
   useEffect(() => {
     let ignore = false;
     Promise.all([
-      api.fetchCached('/students'),
-      api.fetchCached('/sessions').catch(() => null),
-      api.fetchCached('/campaigns').catch(() => null),
+      api.fetchCached("/students"),
+      api.fetchCached("/sessions").catch(() => null),
+      api.fetchCached("/campaigns").catch(() => null),
     ])
       .then(([studentsRes, sessionsRes, campaignsRes]) => {
         if (ignore) return;
@@ -83,7 +86,7 @@ export default function StudentPage() {
           message.error(
             err.response?.data?.message ||
               err.message ||
-              'Không thể tải danh sách học viên.'
+              "Không thể tải danh sách học viên.",
           );
         }
       })
@@ -112,7 +115,7 @@ export default function StudentPage() {
           st.phone?.toLowerCase().includes(kw) ||
           st.classCode?.toLowerCase().includes(kw) ||
           st.campaignTitle?.toLowerCase().includes(kw) ||
-          st.paymentNote?.toLowerCase().includes(kw)
+          st.paymentNote?.toLowerCase().includes(kw),
       );
     }
 
@@ -126,7 +129,7 @@ export default function StudentPage() {
   const hasActiveFilter = Boolean(searchText.trim() || filterPaid !== null);
 
   const resetFilters = useCallback(() => {
-    setSearchText('');
+    setSearchText("");
     setFilterPaid(null);
   }, []);
 
@@ -135,7 +138,6 @@ export default function StudentPage() {
     const map = {};
     const stats = {};
 
-    // Map học viên theo sessionId để tra cứu O(1)
     const studentsBySession = {};
     filteredStudents.forEach((st) => {
       const sId = String(st.sessionId);
@@ -143,11 +145,15 @@ export default function StudentPage() {
       studentsBySession[sId].push(st);
     });
 
-    // Khởi tạo từ danh sách campaigns
     campaigns.forEach((c) => {
+      const initialMonths = {};
+      (c.months ?? []).forEach((mk) => {
+        initialMonths[mk] = [];
+      });
+
       map[c._id] = {
         campaign: c,
-        months: {},
+        months: initialMonths,
         orderedMonths: c.months ?? [],
       };
       stats[c._id] = {
@@ -158,7 +164,6 @@ export default function StudentPage() {
       };
     });
 
-    // Gắn từng session và danh sách học viên tương ứng vào Khóa học -> Tháng
     sessions.forEach((session) => {
       const campObj = session.campaignId;
       const cId = campObj?._id ?? session.campaignId;
@@ -166,7 +171,9 @@ export default function StudentPage() {
 
       if (!map[cId]) {
         map[cId] = {
-          campaign: campObj?._id ? campObj : { _id: cId, title: 'Khóa học khác', months: [] },
+          campaign: campObj?._id
+            ? campObj
+            : { _id: cId, title: "Khóa học khác", months: [] },
           months: {},
           orderedMonths: campObj?.months ?? [],
         };
@@ -180,7 +187,7 @@ export default function StudentPage() {
         };
       }
 
-      const mKey = session.campaignMonth ?? '??';
+      const mKey = session.campaignMonth ?? "??";
       if (!map[cId].months[mKey]) {
         map[cId].months[mKey] = [];
       }
@@ -193,17 +200,18 @@ export default function StudentPage() {
 
       stats[cId].sessionCount += 1;
       stats[cId].studentCount += sessionStudents.length;
-      stats[cId].unpaidCount += sessionStudents.filter((s) => !s.isFullyPaid).length;
+      stats[cId].unpaidCount += sessionStudents.filter(
+        (s) => !s.isFullyPaid,
+      ).length;
       if (!stats[cId].months.includes(mKey)) {
         stats[cId].months.push(mKey);
       }
     });
 
-    // Sắp xếp các lớp trong từng tháng theo mã lớp (K01, K02, ..., ÔN-01)
     Object.values(map).forEach((cGroup) => {
       Object.keys(cGroup.months).forEach((mk) => {
         cGroup.months[mk].sort((a, b) =>
-          (a.session.classCode ?? '').localeCompare(b.session.classCode ?? '')
+          (a.session.classCode ?? "").localeCompare(b.session.classCode ?? ""),
         );
       });
     });
@@ -225,23 +233,25 @@ export default function StudentPage() {
     if (chosenCampaignId && hierarchyMap[chosenCampaignId]) {
       return chosenCampaignId;
     }
-    // Ưu tiên chọn khóa học đầu tiên có học viên
     const firstWithStudents = displayCampaigns.find(
-      (c) => (courseStatsMap[c._id]?.studentCount ?? 0) > 0
+      (c) => (courseStatsMap[c._id]?.studentCount ?? 0) > 0,
     );
     return firstWithStudents?._id ?? displayCampaigns[0]?._id ?? null;
   }, [chosenCampaignId, hierarchyMap, displayCampaigns, courseStatsMap]);
 
-  // ── Danh sách Tháng của Khóa học đang chọn ─────────────────────────────────
+  // ── Danh sách Tháng của Khóa học đang chọn (Sắp xếp tăng dần theo Năm & Tháng) ─
   const { currentMonthsMap, sortedMonthKeys } = useMemo(() => {
     if (!activeCampaignId || !hierarchyMap[activeCampaignId]) {
       return { currentMonthsMap: {}, sortedMonthKeys: [] };
     }
     const { months, orderedMonths } = hierarchyMap[activeCampaignId];
     const allKeys = [
-      ...orderedMonths.filter((m) => months[m]),
-      ...Object.keys(months).filter((m) => !orderedMonths.includes(m)),
-    ];
+      ...new Set([...orderedMonths, ...Object.keys(months)]),
+    ].sort((a, b) => {
+      const [mA, yA] = String(a).split("/").map(Number);
+      const [mB, yB] = String(b).split("/").map(Number);
+      return yA !== yB ? yA - yB : mA - mB;
+    });
     return { currentMonthsMap: months, sortedMonthKeys: allKeys };
   }, [hierarchyMap, activeCampaignId]);
 
@@ -249,22 +259,28 @@ export default function StudentPage() {
     if (selectedMonthKey && sortedMonthKeys.includes(selectedMonthKey)) {
       return selectedMonthKey;
     }
-    // Ưu tiên chọn tháng đầu tiên có học viên
     const firstMonthWithStudents = sortedMonthKeys.find((mk) =>
-      (currentMonthsMap[mk] ?? []).some((g) => g.students.length > 0)
+      (currentMonthsMap[mk] ?? []).some((g) => g.students.length > 0),
     );
-    return firstMonthWithStudents ?? sortedMonthKeys[0] ?? null;
+    const firstMonthWithClasses = sortedMonthKeys.find(
+      (mk) => (currentMonthsMap[mk]?.length ?? 0) > 0,
+    );
+    return (
+      firstMonthWithStudents ??
+      firstMonthWithClasses ??
+      sortedMonthKeys[0] ??
+      null
+    );
   }, [selectedMonthKey, sortedMonthKeys, currentMonthsMap]);
 
   // ── CRUD Handlers ──────────────────────────────────────────────────────────
   const openCreate = useCallback(() => {
     setEditTarget(null);
-    // Gợi ý lớp đầu tiên còn chỗ trong tháng đang xem
     const activeGroups = currentMonthsMap[activeMonthKey] ?? [];
     const firstOpen = activeGroups.find(
       (g) =>
-        g.session.status === 'open' &&
-        (g.session.currentBooked ?? 0) < (g.session.maxCapacity ?? 0)
+        g.session.status === "open" &&
+        (g.session.currentBooked ?? 0) < (g.session.maxCapacity ?? 0),
     );
     setDefaultSessionId(firstOpen?.session._id ?? null);
     setModalOpen(true);
@@ -295,7 +311,7 @@ export default function StudentPage() {
         await api.put(`/students/${editTarget._id}`, payload);
         message.success(`Đã cập nhật học viên "${payload.name}".`);
       } else {
-        await api.post('/students', payload);
+        await api.post("/students", payload);
         message.success(`Đã thêm học viên "${payload.name}".`);
       }
 
@@ -303,9 +319,9 @@ export default function StudentPage() {
       await loadData(true);
     } catch (err) {
       modal.error({
-        title: 'Không thể lưu học viên',
-        content: err.response?.data?.message || err.message || 'Đã xảy ra lỗi.',
-        okText: 'Đã hiểu',
+        title: "Không thể lưu học viên",
+        content: err.response?.data?.message || err.message || "Đã xảy ra lỗi.",
+        okText: "Đã hiểu",
       });
     } finally {
       setSubmitting(false);
@@ -318,7 +334,6 @@ export default function StudentPage() {
         await api.delete(`/students/${record._id}`);
         message.success(`Đã xóa học viên "${record.name}".`);
         setStudents((prev) => prev.filter((st) => st._id !== record._id));
-        // Cập nhật lại sĩ số session tương ứng trong state
         setSessions((prev) =>
           prev.map((s) =>
             String(s._id) === String(record.sessionId)
@@ -326,74 +341,50 @@ export default function StudentPage() {
                   ...s,
                   currentBooked: Math.max(0, (s.currentBooked ?? 1) - 1),
                   status:
-                    s.status === 'full' && (s.currentBooked ?? 1) - 1 < s.maxCapacity
-                      ? 'open'
+                    s.status === "full" &&
+                    (s.currentBooked ?? 1) - 1 < s.maxCapacity
+                      ? "open"
                       : s.status,
                 }
-              : s
-          )
+              : s,
+          ),
         );
       } catch (err) {
         message.error(
-          err.response?.data?.message || err.message || 'Không thể xóa học viên.'
+          err.response?.data?.message ||
+            err.message ||
+            "Không thể xóa học viên.",
         );
       }
     },
-    [message]
+    [message],
   );
 
-  // Danh sách options lớp học cho Select trong Modal Thêm/Sửa Học viên (sắp xếp theo Khóa & Tháng)
   const sessionOptions = useMemo(
     () =>
       [...sessions]
-        .sort((a, b) => (a.classCode ?? '').localeCompare(b.classCode ?? ''))
+        .sort((a, b) => (a.classCode ?? "").localeCompare(b.classCode ?? ""))
         .map((s) => ({
           value: s._id,
-          label: `[${s.classCode}] ${s.campaignId?.title || ''} (${s.timeSlot}) - Tháng ${s.campaignMonth} (${s.currentBooked}/${s.maxCapacity})`,
+          label: `[${s.classCode}] ${s.campaignId?.title || ""} (${s.timeSlot}) - Tháng ${s.campaignMonth} (${s.currentBooked}/${s.maxCapacity})`,
         })),
-    [sessions]
+    [sessions],
   );
 
-  // ── Items cho Tabs Tháng trên Desktop ──────────────────────────────────────
-  const monthTabItems = useMemo(
-    () =>
-      sortedMonthKeys.map((mk) => {
-        const groups = currentMonthsMap[mk] ?? [];
-        const studentCount = groups.reduce((sum, g) => sum + g.students.length, 0);
-        return {
-          key: mk,
-          label: (
-            <span>
-              Tháng {mk}{' '}
-              <span style={{ fontWeight: 400, opacity: 0.75 }}>({studentCount})</span>
-            </span>
-          ),
-          children: (
-            <StudentMonthContent
-              sessionGroups={groups}
-              isMobile={false}
-              hasActiveFilter={hasActiveFilter}
-              onAddStudentToClass={openCreateForClass}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-            />
-          ),
-        };
-      }),
-    [
-      sortedMonthKeys,
-      currentMonthsMap,
-      hasActiveFilter,
-      openCreateForClass,
-      openEdit,
-      handleDelete,
-    ]
+  const totalUnpaid = useMemo(
+    () => students.filter((s) => !s.isFullyPaid).length,
+    [students],
   );
 
   return (
     <>
       <PageHeader
         title="Quản lý Học viên"
+        badgeText={
+          students.length > 0
+            ? `${students.length} học viên${totalUnpaid > 0 ? ` · ${totalUnpaid} còn nợ` : ""}`
+            : null
+        }
         loading={loading}
         onReload={handleReload}
         isFilterOpen={isFilterOpen}
@@ -420,7 +411,7 @@ export default function StudentPage() {
             allowClear
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             id="search-student"
           />
         </Col>
@@ -431,7 +422,7 @@ export default function StudentPage() {
             allowClear
             value={filterPaid}
             onChange={(val) => setFilterPaid(val ?? null)}
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             id="filter-student-status"
             options={PAYMENT_STATUS_OPTIONS}
           />
@@ -449,78 +440,44 @@ export default function StudentPage() {
         }}
       />
 
-      {/* Tầng 2 & 3: Chọn Tháng -> Xem từng Lớp học & Học viên */}
+      {/* Tầng 2 & 3: Chọn Năm & Tháng (Đồng bộ với trang Quản lý Lớp học) -> Xem từng Lớp học & Học viên */}
       {loading ? (
-        <Card loading style={{ borderRadius: 8, marginTop: 4 }} />
+        <Card loading style={{ borderRadius: 12, marginTop: 4 }} />
       ) : !activeCampaignId || sortedMonthKeys.length === 0 ? (
         <Empty
           description="Khóa học này chưa có lớp học hoặc học viên nào."
-          style={{ padding: '48px 0' }}
+          style={{ padding: "48px 0" }}
         />
       ) : !isMobile ? (
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 8,
-            border: '1px solid #f0f0f0',
-            padding: '0 16px 16px',
-          }}
-        >
-          <Tabs
-            type="card"
-            size="small"
-            activeKey={activeMonthKey}
-            onChange={setSelectedMonthKey}
-            items={monthTabItems}
-            className="month-tabs"
-            style={{ marginTop: 4 }}
+        <div className="admin-saas-card">
+          <StudentMonthBar
+            sortedMonthKeys={sortedMonthKeys}
+            currentMonthsMap={currentMonthsMap}
+            selectedMonthKey={activeMonthKey}
+            onSelectMonth={setSelectedMonthKey}
+            isMobile={false}
           />
+
+          <div style={{ padding: "14px 16px 16px" }}>
+            <StudentMonthContent
+              sessionGroups={currentMonthsMap[activeMonthKey] ?? []}
+              isMobile={false}
+              hasActiveFilter={hasActiveFilter}
+              onAddStudentToClass={openCreateForClass}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+            />
+          </div>
         </div>
       ) : (
         <div>
-          {/* Thanh chọn Tháng dạng Pill cuộn ngang trên Mobile */}
-          <div
-            className="mobile-month-pills-bar"
-            style={{
-              display: 'flex',
-              overflowX: 'auto',
-              gap: 8,
-              padding: '4px 0 14px 0',
-              scrollbarWidth: 'none',
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            {sortedMonthKeys.map((mk) => {
-              const groups = currentMonthsMap[mk] ?? [];
-              const studentCount = groups.reduce((sum, g) => sum + g.students.length, 0);
-              const isActive = mk === activeMonthKey;
-
-              return (
-                <div
-                  key={mk}
-                  onClick={() => setSelectedMonthKey(mk)}
-                  className="mobile-month-pill"
-                  style={{
-                    borderRadius: 20,
-                    padding: '6px 16px',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.25s',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    userSelect: 'none',
-                    backgroundColor: isActive ? '#EFF6FF' : '#ffffff',
-                    color: isActive ? '#1D4ED8' : '#334155',
-                    border: isActive ? '1.5px solid #3B82F6' : '1px solid #E2E8F0',
-                    fontWeight: isActive ? 700 : 500,
-                    fontSize: 13,
-                    boxShadow: isActive ? '0 2px 8px rgba(59, 130, 246, 0.14)' : 'none',
-                  }}
-                >
-                  Tháng {mk} ({studentCount})
-                </div>
-              );
-            })}
-          </div>
+          <StudentMonthBar
+            sortedMonthKeys={sortedMonthKeys}
+            currentMonthsMap={currentMonthsMap}
+            selectedMonthKey={activeMonthKey}
+            onSelectMonth={setSelectedMonthKey}
+            isMobile
+          />
 
           <StudentMonthContent
             sessionGroups={currentMonthsMap[activeMonthKey] ?? []}

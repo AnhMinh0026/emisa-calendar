@@ -8,11 +8,7 @@ import {
   Grid,
   message,
 } from "antd";
-import {
-  FacebookFilled,
-  CopyOutlined,
-  CheckOutlined,
-} from "@ant-design/icons";
+import { FacebookFilled, CopyOutlined, CheckOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { T } from "../../constants";
 
@@ -396,7 +392,7 @@ const ContactModal = memo(function ContactModal({
         >
           Nhấn vào kênh liên hệ bên dưới và{" "}
           <strong style={{ color: T.black }}>dán thông tin</strong> để chốt lịch
-          học nhanh nhất
+          học.
         </Text>
 
         {/* Nút liên hệ Facebook & Zalo cân đối (tự động copy nếu khách bấm thẳng) */}

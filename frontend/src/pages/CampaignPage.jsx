@@ -1,19 +1,79 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  Table, Button, Input, Space, Tag, Popconfirm, App,
-  Typography, Tooltip, Select, Switch, Col, Grid,
-} from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import api from '../services/api';
-import { MONTH_OPTIONS } from '../constants';
-import useDebounce from '../hooks/useDebounce';
-import PageHeader from '../components/common/PageHeader';
-import FilterToolbar from '../components/common/FilterToolbar';
-import CampaignFormModal from '../components/campaigns/CampaignFormModal';
-import CampaignMobileList from '../components/campaigns/CampaignMobileList';
+  Table,
+  Button,
+  Input,
+  Space,
+  Popconfirm,
+  App,
+  Typography,
+  Tooltip,
+  Select,
+  Switch,
+  Col,
+  Grid,
+} from "antd";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import api from "../services/api";
+import { MONTH_OPTIONS, T } from "../constants";
+import useDebounce from "../hooks/useDebounce";
+import PageHeader from "../components/common/PageHeader";
+import FilterToolbar from "../components/common/FilterToolbar";
+import CampaignFormModal from "../components/campaigns/CampaignFormModal";
+import CampaignMobileList from "../components/campaigns/CampaignMobileList";
 
 const { Text } = Typography;
+
+/**
+ * Rút gọn danh sách tháng ['09/2026', '10/2026', '11/2026', '12/2026']
+ * thành dạng Typography tinh gọn: Tháng 09 · 10 · 11 · 12 /2026 (thay cho hàng loạt Tag xanh)
+ */
+const renderCompactMonths = (months) => {
+  if (!Array.isArray(months) || months.length === 0) {
+    return <Text type="secondary">—</Text>;
+  }
+
+  const sorted = [...months].sort((a, b) => {
+    const [mA, yA] = String(a).split("/").map(Number);
+    const [mB, yB] = String(b).split("/").map(Number);
+    return yA !== yB ? yA - yB : mA - mB;
+  });
+
+  const parsed = sorted.map((mk) => {
+    const [mm, yyyy] = String(mk).split("/");
+    return { raw: mk, mm: mm || mk, yyyy: yyyy || "" };
+  });
+
+  const years = [...new Set(parsed.map((p) => p.yyyy).filter(Boolean))];
+  const sameYear = years.length === 1;
+
+  return (
+    <span style={{ fontSize: 13, lineHeight: 1.5 }}>
+      <span style={{ color: "#6E6E73" }}>Tháng </span>
+      <span style={{ color: T.black, fontWeight: 600 }}>
+        {parsed.map((item, idx) => (
+          <span key={item.raw}>
+            {item.mm}
+            {!sameYear && item.yyyy ? `/${item.yyyy}` : ""}
+            {idx < parsed.length - 1 && (
+              <span
+                style={{ color: "#C7C7CC", fontWeight: 400, margin: "0 5px" }}
+              >
+                ·
+              </span>
+            )}
+          </span>
+        ))}
+      </span>
+      {sameYear && years[0] && (
+        <span style={{ color: "#8E8E93", fontSize: 12.5, marginLeft: 3 }}>
+          /{years[0]}
+        </span>
+      )}
+    </span>
+  );
+};
 
 export default function CampaignPage() {
   const { message, modal } = App.useApp();
@@ -21,16 +81,16 @@ export default function CampaignPage() {
 
   // ── State dữ liệu (Khởi tạo từ SWR Cache giúp chuyển trang tức thì) ────────
   const [campaigns, setCampaigns] = useState(
-    () => api.getCached('/campaigns')?.data ?? []
+    () => api.getCached("/campaigns")?.data ?? [],
   );
-  const [loading, setLoading] = useState(() => !api.getCached('/campaigns'));
+  const [loading, setLoading] = useState(() => !api.getCached("/campaigns"));
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
 
   // ── State Filter ───────────────────────────────────────────────────────────
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 200);
   const [filterMonth, setFilterMonth] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -39,26 +99,29 @@ export default function CampaignPage() {
   const fetchCampaigns = useCallback(
     async (forceRefresh = false) => {
       try {
-        const res = await api.fetchCached('/campaigns', { force: forceRefresh });
+        const res = await api.fetchCached("/campaigns", {
+          force: forceRefresh,
+        });
         setCampaigns(res?.data ?? []);
       } catch (err) {
-        message.error(err.message || 'Không thể tải danh sách khóa học.');
+        message.error(err.message || "Không thể tải danh sách khóa học.");
       } finally {
         setLoading(false);
       }
     },
-    [message]
+    [message],
   );
 
   useEffect(() => {
     let ignore = false;
     api
-      .fetchCached('/campaigns')
+      .fetchCached("/campaigns")
       .then((res) => {
         if (!ignore) setCampaigns(res?.data ?? []);
       })
       .catch((err) => {
-        if (!ignore) message.error(err.message || 'Không thể tải danh sách khóa học.');
+        if (!ignore)
+          message.error(err.message || "Không thể tải danh sách khóa học.");
       })
       .finally(() => {
         if (!ignore) setLoading(false);
@@ -82,13 +145,13 @@ export default function CampaignPage() {
       result = result.filter(
         (c) =>
           c.title?.toLowerCase().includes(kw) ||
-          c.description?.toLowerCase().includes(kw)
+          c.description?.toLowerCase().includes(kw),
       );
     }
 
     if (filterMonth) {
       result = result.filter(
-        (c) => Array.isArray(c.months) && c.months.includes(filterMonth)
+        (c) => Array.isArray(c.months) && c.months.includes(filterMonth),
       );
     }
 
@@ -97,11 +160,11 @@ export default function CampaignPage() {
 
   const hasActiveFilter = Boolean(searchText.trim() || filterMonth);
   const resetFilters = useCallback(() => {
-    setSearchText('');
+    setSearchText("");
     setFilterMonth(null);
   }, []);
 
-  // ── CRUD Handlers (Cập nhật trực tiếp state nội bộ tránh giật/reload bảng) ─
+  // ── CRUD Handlers ──────────────────────────────────────────────────────────
   const openCreate = useCallback(() => {
     setEditTarget(null);
     setModalOpen(true);
@@ -125,13 +188,13 @@ export default function CampaignPage() {
         message.success(`Đã cập nhật khóa học "${payload.title}".`);
         if (data?.data) {
           setCampaigns((prev) =>
-            prev.map((c) => (c._id === editTarget._id ? data.data : c))
+            prev.map((c) => (c._id === editTarget._id ? data.data : c)),
           );
         } else {
           fetchCampaigns(true);
         }
       } else {
-        const { data } = await api.post('/campaigns', payload);
+        const { data } = await api.post("/campaigns", payload);
         message.success(`Đã tạo khóa học "${payload.title}".`);
         if (data?.data) {
           setCampaigns((prev) => [data.data, ...prev]);
@@ -141,7 +204,7 @@ export default function CampaignPage() {
       }
       closeModal();
     } catch (err) {
-      message.error(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+      message.error(err.message || "Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -155,13 +218,13 @@ export default function CampaignPage() {
         setCampaigns((prev) => prev.filter((c) => c._id !== record._id));
       } catch (err) {
         modal.error({
-          title: 'Không thể xóa',
-          content: err.message || 'Có lỗi xảy ra khi xóa khóa học.',
-          okText: 'Đã hiểu',
+          title: "Không thể xóa",
+          content: err.message || "Có lỗi xảy ra khi xóa khóa học.",
+          okText: "Đã hiểu",
         });
       }
     },
-    [message, modal]
+    [message, modal],
   );
 
   const handleToggleHidden = useCallback(
@@ -173,66 +236,77 @@ export default function CampaignPage() {
         message.success(
           newHidden
             ? `Đã ẩn khóa học "${record.title}".`
-            : `Đã hiển thị khóa học "${record.title}".`
+            : `Đã hiển thị khóa học "${record.title}".`,
         );
         setCampaigns((prev) =>
-          prev.map((c) => (c._id === record._id ? { ...c, isHidden: newHidden } : c))
+          prev.map((c) =>
+            c._id === record._id ? { ...c, isHidden: newHidden } : c,
+          ),
         );
       } catch (err) {
-        message.error(err.message || 'Không thể cập nhật trạng thái hiển thị.');
+        message.error(err.message || "Không thể cập nhật trạng thái hiển thị.");
       } finally {
         setTogglingId(null);
       }
     },
-    [message]
+    [message],
+  );
+
+  const visibleCount = useMemo(
+    () => campaigns.filter((c) => !c.isHidden).length,
+    [campaigns],
   );
 
   // ── Cột bảng Desktop ──────────────────────────────────────────────────────
   const columns = useMemo(
     () => [
       {
-        title: 'Tiêu đề',
-        dataIndex: 'title',
-        key: 'title',
+        title: "Khóa học",
+        dataIndex: "title",
+        key: "title",
+        width: 200,
         ellipsis: true,
-        render: (text) => <Text strong>{text}</Text>,
+        render: (text) => (
+          <Text
+            strong
+            style={{ color: T.black, fontSize: 13.5, letterSpacing: -0.2 }}
+          >
+            {text}
+          </Text>
+        ),
       },
       {
-        title: 'Mô tả',
-        dataIndex: 'description',
-        key: 'description',
+        title: "Mô tả chi tiết",
+        dataIndex: "description",
+        width: 200,
+        key: "description",
         ellipsis: true,
-        render: (text) => text || <Text type="secondary">—</Text>,
-      },
-      {
-        title: 'Các tháng học',
-        dataIndex: 'months',
-        key: 'months',
-        render: (months) =>
-          Array.isArray(months) && months.length > 0 ? (
-            <Space size={4} wrap>
-              {months.map((m) => (
-                <Tag key={m} color="blue" style={{ fontWeight: 600, fontSize: 12 }}>
-                  {m}
-                </Tag>
-              ))}
-            </Space>
+        render: (text) =>
+          text ? (
+            <span style={{ color: "#6E6E73", fontSize: 13 }}>{text}</span>
           ) : (
             <Text type="secondary">—</Text>
           ),
       },
       {
-        title: 'Hiển thị',
-        dataIndex: 'isHidden',
-        key: 'isHidden',
+        title: "Lịch khai giảng",
+        dataIndex: "months",
+        key: "months",
+        width: 250,
+        render: (months) => renderCompactMonths(months),
+      },
+      {
+        title: "Hiển thị",
+        dataIndex: "isHidden",
+        key: "isHidden",
         width: 110,
-        align: 'center',
+        align: "center",
         render: (_, record) => (
           <Tooltip
             title={
               !record.isHidden
-                ? 'Đang hiển thị cho học viên (Click để ẩn)'
-                : 'Đang ẩn khỏi học viên (Click để hiện)'
+                ? "Đang hiển thị cho học viên (Click để ẩn)"
+                : "Đang ẩn khỏi học viên (Click để hiện)"
             }
           >
             <Switch
@@ -242,31 +316,36 @@ export default function CampaignPage() {
               checkedChildren="Hiện"
               unCheckedChildren="Ẩn"
               style={{
-                backgroundColor: !record.isHidden ? '#34C759' : undefined,
+                backgroundColor: !record.isHidden ? "#34C759" : undefined,
               }}
             />
           </Tooltip>
         ),
       },
       {
-        title: 'Ngày tạo',
-        dataIndex: 'createdAt',
-        key: 'createdAt',
-        width: 155,
-        align: 'center',
-        render: (val) => (val ? dayjs(val).format('DD/MM/YYYY HH:mm') : '—'),
+        title: "Ngày tạo",
+        dataIndex: "createdAt",
+        key: "createdAt",
+        width: 145,
+        align: "center",
+        render: (val) => (
+          <span style={{ color: "#6E6E73", fontSize: 12.5 }}>
+            {val ? dayjs(val).format("DD/MM/YYYY HH:mm") : "—"}
+          </span>
+        ),
       },
       {
-        title: 'Thao tác',
-        key: 'actions',
-        width: 100,
-        align: 'center',
-        fixed: 'right',
+        title: "Thao tác",
+        key: "actions",
+        width: 96,
+        align: "center",
+        fixed: "right",
         render: (_, record) => (
-          <Space size={4}>
+          <Space size={2}>
             <Tooltip title="Chỉnh sửa">
               <Button
                 type="text"
+                size="small"
                 icon={<EditOutlined />}
                 onClick={() => openEdit(record)}
                 id={`btn-edit-campaign-${record._id}`}
@@ -284,6 +363,7 @@ export default function CampaignPage() {
               <Tooltip title="Xóa">
                 <Button
                   type="text"
+                  size="small"
                   danger
                   icon={<DeleteOutlined />}
                   id={`btn-delete-campaign-${record._id}`}
@@ -294,13 +374,18 @@ export default function CampaignPage() {
         ),
       },
     ],
-    [togglingId, handleToggleHidden, openEdit, handleDelete]
+    [togglingId, handleToggleHidden, openEdit, handleDelete],
   );
 
   return (
     <>
       <PageHeader
         title="Quản lý Khóa học"
+        badgeText={
+          campaigns.length > 0
+            ? `${campaigns.length} khóa học · ${visibleCount} đang hiện`
+            : null
+        }
         loading={loading}
         onReload={handleReload}
         isFilterOpen={isFilterOpen}
@@ -312,69 +397,108 @@ export default function CampaignPage() {
         addBtnId="btn-add-campaign"
       />
 
-      <FilterToolbar
-        isOpen={isFilterOpen}
-        hasActiveFilter={hasActiveFilter}
-        filteredCount={filteredCampaigns.length}
-        totalCount={campaigns.length}
-        unitLabel="kết quả"
-        onReset={resetFilters}
-      >
-        <Col xs={24} sm={12} md={8}>
-          <Input.Search
-            placeholder="Tìm theo tên khóa học..."
-            allowClear
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: '100%' }}
-            id="search-campaign"
-          />
-        </Col>
-
-        <Col xs={24} sm={12} md={6}>
-          <Select
-            placeholder="Lọc theo tháng"
-            allowClear
-            showSearch
-            value={filterMonth}
-            onChange={(val) => setFilterMonth(val ?? null)}
-            options={MONTH_OPTIONS}
-            style={{ width: '100%' }}
-            id="filter-campaign-month"
-          />
-        </Col>
-      </FilterToolbar>
-
       {screens.md ? (
-        <Table
-          rowKey="_id"
-          dataSource={filteredCampaigns}
-          columns={columns}
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showTotal: (total) => `${total} / ${campaigns.length} khóa học`,
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50'],
-          }}
-          scroll={{ x: 800 }}
-          size="middle"
-          locale={{
-            emptyText: hasActiveFilter
-              ? 'Không tìm thấy kết quả phù hợp.'
-              : 'Chưa có khóa học nào. Hãy thêm mới!',
-          }}
-        />
+        <div className="admin-saas-card">
+          <FilterToolbar
+            attached
+            isOpen={isFilterOpen}
+            hasActiveFilter={hasActiveFilter}
+            filteredCount={filteredCampaigns.length}
+            totalCount={campaigns.length}
+            unitLabel="kết quả"
+            onReset={resetFilters}
+          >
+            <Col xs={24} sm={12} md={8}>
+              <Input.Search
+                placeholder="Tìm theo tên khóa học..."
+                allowClear
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ width: "100%" }}
+                id="search-campaign"
+              />
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Select
+                placeholder="Lọc theo tháng"
+                allowClear
+                showSearch
+                value={filterMonth}
+                onChange={(val) => setFilterMonth(val ?? null)}
+                options={MONTH_OPTIONS}
+                style={{ width: "100%" }}
+                id="filter-campaign-month"
+              />
+            </Col>
+          </FilterToolbar>
+
+          <Table
+            rowKey="_id"
+            dataSource={filteredCampaigns}
+            columns={columns}
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showTotal: (total) => `${total} / ${campaigns.length} khóa học`,
+              showSizeChanger: true,
+              pageSizeOptions: ["10", "20", "50"],
+              style: { padding: "0 16px", margin: "12px 0" },
+            }}
+            scroll={{ x: 800 }}
+            size="middle"
+            locale={{
+              emptyText: hasActiveFilter
+                ? "Không tìm thấy kết quả phù hợp."
+                : "Chưa có khóa học nào. Hãy thêm mới!",
+            }}
+          />
+        </div>
       ) : (
-        <CampaignMobileList
-          loading={loading}
-          campaigns={filteredCampaigns}
-          hasActiveFilter={hasActiveFilter}
-          togglingId={togglingId}
-          onToggleHidden={handleToggleHidden}
-          onEdit={openEdit}
-          onDelete={handleDelete}
-        />
+        <>
+          <FilterToolbar
+            isOpen={isFilterOpen}
+            hasActiveFilter={hasActiveFilter}
+            filteredCount={filteredCampaigns.length}
+            totalCount={campaigns.length}
+            unitLabel="kết quả"
+            onReset={resetFilters}
+          >
+            <Col xs={24} sm={12} md={8}>
+              <Input.Search
+                placeholder="Tìm theo tên khóa học..."
+                allowClear
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ width: "100%" }}
+                id="search-campaign"
+              />
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Select
+                placeholder="Lọc theo tháng"
+                allowClear
+                showSearch
+                value={filterMonth}
+                onChange={(val) => setFilterMonth(val ?? null)}
+                options={MONTH_OPTIONS}
+                style={{ width: "100%" }}
+                id="filter-campaign-month"
+              />
+            </Col>
+          </FilterToolbar>
+
+          <CampaignMobileList
+            loading={loading}
+            campaigns={filteredCampaigns}
+            hasActiveFilter={hasActiveFilter}
+            togglingId={togglingId}
+            onToggleHidden={handleToggleHidden}
+            onEdit={openEdit}
+            onDelete={handleDelete}
+          />
+        </>
       )}
 
       <CampaignFormModal

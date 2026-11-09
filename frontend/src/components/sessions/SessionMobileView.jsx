@@ -1,7 +1,13 @@
 import { memo } from 'react';
-import { Card, Flex, Space, Button, Popconfirm, Typography, Tag, Empty, Switch } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { App, Card, Flex, Button, Dropdown, Typography, Empty } from 'antd';
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  MenuOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { T } from '../../constants';
 import { ClassCodeTag, SessionStatusTag } from '../common/StatusTags';
 import SessionMonthBar from './SessionMonthBar';
 
@@ -9,165 +15,167 @@ const { Text } = Typography;
 
 const MobileSessionCard = memo(function MobileSessionCard({
   session,
-  togglingId,
-  onToggleHidden,
   onDetail,
   onEdit,
   onDelete,
 }) {
+  const { modal } = App.useApp();
+
+  const sortedDates = [...(session.studyDates ?? [])].sort(
+    (a, b) => new Date(a) - new Date(b)
+  );
+
+  const actionItems = [
+    {
+      key: 'detail',
+      icon: <EyeOutlined style={{ color: '#1E4DB7' }} />,
+      label: <span id={`btn-detail-${session._id}`}>Xem chi tiết</span>,
+      onClick: () => onDetail(session),
+    },
+    {
+      key: 'edit',
+      icon: <EditOutlined />,
+      label: <span id={`btn-edit-${session._id}`}>Chỉnh sửa lớp</span>,
+      onClick: () => onEdit(session),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'delete',
+      danger: true,
+      icon: <DeleteOutlined />,
+      label: <span id={`btn-delete-${session._id}`}>Xóa lớp học</span>,
+      onClick: () => {
+        modal.confirm({
+          title: 'Xác nhận xóa',
+          content: `Bạn chắc chắn muốn xóa lớp học "${session.classCode}"?`,
+          okText: 'Xóa',
+          okButtonProps: { danger: true },
+          cancelText: 'Hủy',
+          centered: true,
+          onOk: () => onDelete(session),
+        });
+      },
+    },
+  ];
+
   return (
     <Card
       className="mobile-session-card"
-      styles={{ body: { padding: '12px' } }}
+      styles={{ body: { padding: '14px' } }}
       style={{
-        borderRadius: 8,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
-        border: '1px solid #f0f0f0',
+        borderRadius: 12,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        border: '1px solid #ECECEE',
         marginBottom: 10,
         opacity: session.isHidden ? 0.85 : 1,
       }}
     >
-      {/* Header: Mã lớp & Nhóm Icon Thao tác + Switch Ẩn/Hiện */}
+      {/* Header: Mã lớp + Giờ học & Menu Thao tác */}
       <Flex justify="space-between" align="center" style={{ marginBottom: 10 }}>
-        <Flex align="center" gap={6}>
-          <ClassCodeTag code={session.classCode} fontSize={13} />
+        <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
+          <ClassCodeTag code={session.classCode} fontSize={12} muted={session.status !== 'open'} />
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 14,
+              color: T.black,
+              letterSpacing: -0.2,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {session.timeSlot}
+          </span>
           {session.isHidden && (
-            <Tag style={{ margin: 0, fontSize: 11, color: '#8c8c8c' }}>Đang ẩn</Tag>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: '#64748B',
+                background: '#F1F5F9',
+                padding: '1px 7px',
+                borderRadius: 6,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Đang ẩn
+            </span>
           )}
         </Flex>
-        <Space size={4} align="center">
-          <Switch
+
+        <Dropdown
+          menu={{ items: actionItems }}
+          trigger={['click']}
+          placement="bottomRight"
+        >
+          <Button
+            type="text"
             size="small"
-            checked={!session.isHidden}
-            loading={togglingId === session._id}
-            onChange={() => onToggleHidden?.(session)}
-            checkedChildren="Hiện"
-            unCheckedChildren="Ẩn"
+            icon={<MenuOutlined style={{ fontSize: 14, color: '#475569' }} />}
+            id={`btn-actions-${session._id}`}
             style={{
-              backgroundColor: !session.isHidden ? '#34C759' : undefined,
-              marginRight: 2,
+              width: 30,
+              height: 30,
+              borderRadius: 6,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           />
-          <Button
-            type="text"
-            size="small"
-            icon={<EyeOutlined />}
-            style={{ color: '#1677ff' }}
-            onClick={() => onDetail(session)}
-            id={`btn-detail-${session._id}`}
-          />
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(session)}
-            id={`btn-edit-${session._id}`}
-          />
-          <Popconfirm
-            title="Xác nhận xóa"
-            description={`Xóa lớp học "${session.classCode}"?`}
-            onConfirm={() => onDelete(session)}
-            okText="Xóa"
-            okButtonProps={{ danger: true }}
-            cancelText="Hủy"
-            placement="bottomRight"
-          >
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              id={`btn-delete-${session._id}`}
-            />
-          </Popconfirm>
-        </Space>
+        </Dropdown>
       </Flex>
 
-      {/* Giờ học */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 8,
-        }}
-      >
-        <Text type="secondary" style={{ fontSize: 14, color: '#8c8c8c', flexShrink: 0 }}>
-          Giờ học:
-        </Text>
-        <Text strong style={{ fontSize: 14, fontWeight: 600, color: '#1f1f1f' }}>
-          {session.timeSlot}
-        </Text>
-      </div>
-
-      {/* Ngày học */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 10,
-        }}
-      >
-        <Text
-          type="secondary"
+      {/* Lịch ngày học tinh gọn */}
+      {sortedDates.length > 0 && (
+        <div
           style={{
-            fontSize: 14,
-            color: '#8c8c8c',
-            flexShrink: 0,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+            columnGap: 6,
+            rowGap: 6,
+            marginBottom: 10,
           }}
         >
-          Ngày học:
-        </Text>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-          {[...(session.studyDates ?? [])]
-            .sort((a, b) => new Date(a) - new Date(b))
-            .map((date, index) => (
-              <span
-                key={index}
-                style={{
-                  background: '#F5F5F7',
-                  border: '1px solid #E5E7EB',
-                  color: '#1f1f1f',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  padding: '2px 8px',
-                  borderRadius: 6,
-                  lineHeight: 1.35,
-                  whiteSpace: 'nowrap',
-                }}
-              >
+          {sortedDates.map((date, index) => (
+            <div
+              key={index}
+              style={{
+                background: '#FAFAFC',
+                border: '1px solid #ECECEE',
+                borderRadius: 8,
+                padding: '5px 4px',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: 10, color: '#8E8E93', lineHeight: 1.2 }}>
+                Buổi {index + 1}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.black, lineHeight: 1.25 }}>
                 {dayjs(date).format('DD/MM')}
-              </span>
-            ))}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
 
       {/* Sĩ số & Trạng thái */}
       <Flex
         justify="space-between"
         align="center"
-        style={{ paddingTop: 8, borderTop: '1px dashed #f0f0f0' }}
+        style={{ paddingTop: 9, borderTop: '1px solid #F2F2F7' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Text type="secondary" style={{ fontSize: 14, color: '#8c8c8c', flexShrink: 0 }}>
-            Sĩ số:
-          </Text>
-          <span style={{ fontSize: 14 }}>
-            <Text
-              strong
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: session.currentBooked >= session.maxCapacity ? '#cf1322' : '#389e0d',
-              }}
-            >
-              {session.currentBooked}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 14, color: '#8c8c8c' }}>
-              /{session.maxCapacity}
-            </Text>
-          </span>
+        <div style={{ fontSize: 13 }}>
+          <Text style={{ color: '#6E6E73', fontSize: 13 }}>Sĩ số: </Text>
+          <strong
+            style={{
+              color: session.currentBooked >= session.maxCapacity ? '#B91C1C' : T.black,
+              fontWeight: 700,
+            }}
+          >
+            {session.currentBooked}
+          </strong>
+          <span style={{ color: '#8E8E93' }}>/{session.maxCapacity} học viên</span>
         </div>
         <SessionStatusTag status={session.status} mobile />
       </Flex>
@@ -184,15 +192,12 @@ export default function SessionMobileView({
   selectedMonthKey,
   onSelectMonth,
   sessions,
-  togglingId,
-  onToggleHidden,
   onDetail,
   onEdit,
   onDelete,
 }) {
   return (
     <div>
-      {/* 1. Thanh chọn Tháng & Tóm tắt trạng thái lớp trong tháng */}
       <SessionMonthBar
         sortedMonthKeys={sortedMonthKeys}
         currentCampaignMonths={currentCampaignMonths}
@@ -201,15 +206,14 @@ export default function SessionMobileView({
         isMobile
       />
 
-      {/* 2. Danh sách Card lớp học */}
       {sessions.length === 0 ? (
         <Empty
           description="Tháng này chưa có lớp học."
           style={{
             padding: '36px 0',
             background: '#fff',
-            borderRadius: 8,
-            border: '1px solid #f0f0f0',
+            borderRadius: 12,
+            border: '1px solid #ECECEE',
           }}
         />
       ) : (
@@ -218,8 +222,6 @@ export default function SessionMobileView({
             <MobileSessionCard
               key={session._id}
               session={session}
-              togglingId={togglingId}
-              onToggleHidden={onToggleHidden}
               onDetail={onDetail}
               onEdit={onEdit}
               onDelete={onDelete}

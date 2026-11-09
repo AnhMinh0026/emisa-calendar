@@ -74,12 +74,12 @@ export default function SettingsPage() {
 
   return (
     <>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 20 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>
+          <Title level={4} style={{ margin: 0, fontSize: 21, fontWeight: 700, color: '#1D1D1F', letterSpacing: -0.4 }}>
             Cấu hình hệ thống
           </Title>
-          <Text type="secondary" style={{ fontSize: 13 }}>
+          <Text style={{ fontSize: 13, color: '#6E6E73', display: 'block', marginTop: 2 }}>
             Quản lý các thông tin liên hệ hiển thị cho khách hàng
           </Text>
         </div>
@@ -88,11 +88,11 @@ export default function SettingsPage() {
       <Card
         title={
           <Flex align="center" gap={8}>
-            <LinkOutlined style={{ color: '#1677ff' }} />
-            <span>Liên kết mạng xã hội</span>
+            <LinkOutlined style={{ color: '#1D1D1F' }} />
+            <span style={{ fontWeight: 600, color: '#1D1D1F' }}>Liên kết mạng xã hội</span>
           </Flex>
         }
-        style={{ maxWidth: 600, borderRadius: 10 }}
+        style={{ maxWidth: 600, borderRadius: 12, border: '1px solid #ECECEE', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}
       >
         <Paragraph type="secondary" style={{ marginBottom: 20, fontSize: 13 }}>
           Các link này sẽ hiển thị trong trang lịch học công khai (<Text code>/</Text>) khi khách

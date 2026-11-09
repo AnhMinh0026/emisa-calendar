@@ -226,6 +226,17 @@ body,
   transform: translateX(2px);
 }
 
+.admin-course-modal-card:hover {
+  border-color: #1E4DB7 !important;
+  box-shadow: 0 8px 24px rgba(30, 77, 183, 0.1) !important;
+}
+
+.admin-course-modal-card:hover .course-modal-card-arrow {
+  background: #1E4DB7 !important;
+  color: #FFFFFF !important;
+  transform: translateX(2px);
+}
+
 .empty-course-prompt:hover {
   border-color: #AEAEB2 !important;
   background: #F5F5F8 !important;
@@ -247,3 +258,37 @@ body,
 .course-modal-list::-webkit-scrollbar {
   display: none !important;
 }
+
+/* ── Modern SaaS Admin Table & UI Refinements (Linear / Stripe Style) ── */
+.admin-saas-card {
+  background: #FFFFFF;
+  border: 1px solid #ECECEE;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.45px !important;
+  color: #6E6E73 !important;
+  background: #FAFAFC !important;
+  border-bottom: 1px solid #EFEFF4 !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #F2F2F7 !important;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr:last-child > td {
+  border-bottom: none !important;
+}
+

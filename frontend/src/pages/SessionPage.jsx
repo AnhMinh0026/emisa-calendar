@@ -1,22 +1,37 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  Table, Button, Input, Select, Space, Tag, Popconfirm, App,
-  Typography, Tooltip, Empty, Card, Col, Grid, Switch,
-} from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import api from '../services/api';
-import { SESSION_STATUS_OPTIONS } from '../constants';
-import { groupSessionsByCampaign } from '../utils/formatters';
-import useDebounce from '../hooks/useDebounce';
-import PageHeader from '../components/common/PageHeader';
-import FilterToolbar from '../components/common/FilterToolbar';
-import { SessionStatusTag } from '../components/common/StatusTags';
-import CourseSelectorCard from '../components/sessions/CourseSelectorCard';
-import SessionMonthBar from '../components/sessions/SessionMonthBar';
-import SessionFormModal from '../components/sessions/SessionFormModal';
-import SessionDetailModal from '../components/sessions/SessionDetailModal';
-import SessionMobileView from '../components/sessions/SessionMobileView';
+  Table,
+  Button,
+  Input,
+  Select,
+  Space,
+  Popconfirm,
+  App,
+  Typography,
+  Tooltip,
+  Empty,
+  Card,
+  Col,
+  Grid,
+  Switch,
+} from "antd";
+import { EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import api from "../services/api";
+import { SESSION_STATUS_OPTIONS, T } from "../constants";
+import { groupSessionsByCampaign } from "../utils/formatters";
+import useDebounce from "../hooks/useDebounce";
+import PageHeader from "../components/common/PageHeader";
+import FilterToolbar from "../components/common/FilterToolbar";
+import {
+  ClassCodeTag,
+  SessionStatusTag,
+} from "../components/common/StatusTags";
+import CourseSelectorCard from "../components/sessions/CourseSelectorCard";
+import SessionMonthBar from "../components/sessions/SessionMonthBar";
+import SessionFormModal from "../components/sessions/SessionFormModal";
+import SessionDetailModal from "../components/sessions/SessionDetailModal";
+import SessionMobileView from "../components/sessions/SessionMobileView";
 
 const { Text } = Typography;
 
@@ -26,12 +41,12 @@ export default function SessionPage() {
 
   // ── State dữ liệu (Khởi tạo từ SWR Cache giúp chuyển trang tức thì) ────────
   const [sessions, setSessions] = useState(
-    () => api.getCached('/sessions')?.data ?? []
+    () => api.getCached("/sessions")?.data ?? [],
   );
   const [campaigns, setCampaigns] = useState(
-    () => api.getCached('/campaigns')?.data ?? []
+    () => api.getCached("/campaigns")?.data ?? [],
   );
-  const [loading, setLoading] = useState(() => !api.getCached('/sessions'));
+  const [loading, setLoading] = useState(() => !api.getCached("/sessions"));
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -40,7 +55,7 @@ export default function SessionPage() {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
 
   // ── State Filter & Chọn khóa học / tháng ───────────────────────────────────
-  const [searchCode, setSearchCode] = useState('');
+  const [searchCode, setSearchCode] = useState("");
   const debouncedSearchCode = useDebounce(searchCode, 200);
   const [filterStatus, setFilterStatus] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -52,25 +67,27 @@ export default function SessionPage() {
     async (forceRefresh = false) => {
       try {
         const [sessionsRes, campaignsRes] = await Promise.all([
-          api.fetchCached('/sessions', { force: forceRefresh }),
-          api.fetchCached('/campaigns', { force: forceRefresh }).catch(() => null),
+          api.fetchCached("/sessions", { force: forceRefresh }),
+          api
+            .fetchCached("/campaigns", { force: forceRefresh })
+            .catch(() => null),
         ]);
         if (sessionsRes?.data) setSessions(sessionsRes.data);
         if (campaignsRes?.data) setCampaigns(campaignsRes.data);
       } catch (err) {
-        message.error(err.message || 'Không thể tải danh sách lớp học.');
+        message.error(err.message || "Không thể tải danh sách lớp học.");
       } finally {
         setLoading(false);
       }
     },
-    [message]
+    [message],
   );
 
   useEffect(() => {
     let ignore = false;
     Promise.all([
-      api.fetchCached('/sessions'),
-      api.fetchCached('/campaigns').catch(() => null),
+      api.fetchCached("/sessions"),
+      api.fetchCached("/campaigns").catch(() => null),
     ])
       .then(([sessionsRes, campaignsRes]) => {
         if (ignore) return;
@@ -78,7 +95,8 @@ export default function SessionPage() {
         if (campaignsRes?.data) setCampaigns(campaignsRes.data);
       })
       .catch((err) => {
-        if (!ignore) message.error(err.message || 'Không thể tải danh sách lớp học.');
+        if (!ignore)
+          message.error(err.message || "Không thể tải danh sách lớp học.");
       })
       .finally(() => {
         if (!ignore) setLoading(false);
@@ -96,17 +114,17 @@ export default function SessionPage() {
   // ── selectedSession: derive từ sessions state để tự động đồng bộ ───────────
   const selectedSession = useMemo(
     () => sessions.find((s) => s._id === selectedSessionId) ?? null,
-    [sessions, selectedSessionId]
+    [sessions, selectedSessionId],
   );
 
   // ── Cập nhật 1 session ngay lập tức khi thêm/xóa học viên trong DetailModal ─
   const handleSessionUpdated = useCallback(async (updatedSession) => {
     if (updatedSession && updatedSession._id) {
       setSessions((prev) =>
-        prev.map((s) => (s._id === updatedSession._id ? updatedSession : s))
+        prev.map((s) => (s._id === updatedSession._id ? updatedSession : s)),
       );
     } else {
-      const res = await api.fetchCached('/sessions', { force: true });
+      const res = await api.fetchCached("/sessions", { force: true });
       if (res?.data) setSessions(res.data);
     }
   }, []);
@@ -137,7 +155,8 @@ export default function SessionPage() {
         };
       } else {
         base[camp._id].campaign = camp;
-        base[camp._id].orderedMonths = camp.months ?? base[camp._id].orderedMonths ?? [];
+        base[camp._id].orderedMonths =
+          camp.months ?? base[camp._id].orderedMonths ?? [];
       }
 
       (camp.months ?? []).forEach((mk) => {
@@ -163,12 +182,13 @@ export default function SessionPage() {
     ) {
       return chosenCampaignId;
     }
-    // Ưu tiên chọn khóa học đầu tiên có lớp học
     const firstWithSessions = campaigns.find((c) => {
       const g = groupedData[c._id];
       return g && Object.values(g.months).some((m) => m.sessions.length > 0);
     });
-    return firstWithSessions?._id ?? campaignIds[0] ?? campaigns[0]?._id ?? null;
+    return (
+      firstWithSessions?._id ?? campaignIds[0] ?? campaigns[0]?._id ?? null
+    );
   }, [chosenCampaignId, campaignIds, campaigns, groupedData]);
 
   // ── Dữ liệu Tháng & Lớp học theo Campaign đang chọn ────────────────────────
@@ -180,8 +200,8 @@ export default function SessionPage() {
     const allKeys = [
       ...new Set([...orderedMonths, ...Object.keys(months)]),
     ].sort((a, b) => {
-      const [mA, yA] = String(a).split('/').map(Number);
-      const [mB, yB] = String(b).split('/').map(Number);
+      const [mA, yA] = String(a).split("/").map(Number);
+      const [mB, yB] = String(b).split("/").map(Number);
       return yA !== yB ? yA - yB : mA - mB;
     });
 
@@ -192,9 +212,8 @@ export default function SessionPage() {
     if (chosenMonthKey && sortedMonthKeys.includes(chosenMonthKey)) {
       return chosenMonthKey;
     }
-    // Ưu tiên chọn tháng đầu tiên có lớp học
     const firstWithSessions = sortedMonthKeys.find(
-      (mk) => (currentCampaignMonths[mk]?.sessions?.length ?? 0) > 0
+      (mk) => (currentCampaignMonths[mk]?.sessions?.length ?? 0) > 0,
     );
     return firstWithSessions ?? sortedMonthKeys[0] ?? null;
   }, [chosenMonthKey, sortedMonthKeys, currentCampaignMonths]);
@@ -204,7 +223,7 @@ export default function SessionPage() {
       return [];
     }
     return [...currentCampaignMonths[selectedMonthKey].sessions].sort((a, b) =>
-      a.classCode.localeCompare(b.classCode)
+      a.classCode.localeCompare(b.classCode),
     );
   }, [selectedMonthKey, currentCampaignMonths]);
 
@@ -232,30 +251,29 @@ export default function SessionPage() {
         message.success(`Đã cập nhật lớp học "${payload.classCode}".`);
         if (data?.data?._id) {
           setSessions((prev) =>
-            prev.map((s) => (s._id === editTarget._id ? data.data : s))
+            prev.map((s) => (s._id === editTarget._id ? data.data : s)),
           );
         } else {
           await loadData(true);
         }
       } else {
-        const { data } = await api.post('/sessions', payload);
+        const { data } = await api.post("/sessions", payload);
         message.success(`Đã tạo lớp học "${payload.classCode}".`);
         if (data?.data?._id) {
           setSessions((prev) => [data.data, ...prev]);
         } else {
-          const res = await api.fetchCached('/sessions', { force: true });
+          const res = await api.fetchCached("/sessions", { force: true });
           if (res?.data) setSessions(res.data);
         }
-        // Chuyển ngay tới khóa học và tháng của lớp vừa tạo
         if (payload.campaignId) setChosenCampaignId(payload.campaignId);
         if (payload.campaignMonth) setChosenMonthKey(payload.campaignMonth);
       }
       closeModal();
     } catch (err) {
       modal.error({
-        title: 'Không thể lưu lớp học',
-        content: err.response?.data?.message || err.message || 'Đã xảy ra lỗi.',
-        okText: 'Đã hiểu',
+        title: "Không thể lưu lớp học",
+        content: err.response?.data?.message || err.message || "Đã xảy ra lỗi.",
+        okText: "Đã hiểu",
       });
     } finally {
       setSubmitting(false);
@@ -267,11 +285,13 @@ export default function SessionPage() {
       const newHidden = !record.isHidden;
       setTogglingId(record._id);
       try {
-        const { data } = await api.put(`/sessions/${record._id}`, { isHidden: newHidden });
+        const { data } = await api.put(`/sessions/${record._id}`, {
+          isHidden: newHidden,
+        });
         message.success(
           newHidden
             ? `Đã ẩn lớp "${record.classCode}" khỏi trang lịch học công khai.`
-            : `Đã hiển thị công khai lớp "${record.classCode}".`
+            : `Đã hiển thị công khai lớp "${record.classCode}".`,
         );
         setSessions((prev) =>
           prev.map((s) =>
@@ -279,18 +299,20 @@ export default function SessionPage() {
               ? data?.data?._id
                 ? data.data
                 : { ...s, isHidden: newHidden }
-              : s
-          )
+              : s,
+          ),
         );
       } catch (err) {
         message.error(
-          err.response?.data?.message || err.message || 'Không thể cập nhật trạng thái hiển thị.'
+          err.response?.data?.message ||
+            err.message ||
+            "Không thể cập nhật trạng thái hiển thị.",
         );
       } finally {
         setTogglingId(null);
       }
     },
-    [message]
+    [message],
   );
 
   const handleDelete = useCallback(
@@ -301,11 +323,13 @@ export default function SessionPage() {
         setSessions((prev) => prev.filter((s) => s._id !== record._id));
       } catch (err) {
         message.error(
-          err.response?.data?.message || err.message || 'Không thể xóa lớp học.'
+          err.response?.data?.message ||
+            err.message ||
+            "Không thể xóa lớp học.",
         );
       }
     },
-    [message]
+    [message],
   );
 
   const openDetail = useCallback((record) => {
@@ -314,97 +338,123 @@ export default function SessionPage() {
   }, []);
   const closeDetail = useCallback(() => setDetailOpen(false), []);
 
-  // ── Cột bảng Session (Desktop) ─────────────────────────────────────────────
+  // ── Cột bảng Session (Desktop): Tinh gọn, loại bỏ hoàn toàn Tag xanh/tím thừa ──
   const sessionColumns = useMemo(
     () => [
       {
-        title: 'Mã lớp',
-        dataIndex: 'classCode',
-        key: 'classCode',
-        width: 110,
+        title: "Mã lớp",
+        dataIndex: "classCode",
+        key: "classCode",
+        width: 105,
         sorter: (a, b) => a.classCode.localeCompare(b.classCode),
-        defaultSortOrder: 'ascend',
-        render: (val) => (
-          <Tag color="purple" style={{ fontWeight: 600, margin: 0 }}>
-            {val}
-          </Tag>
+        defaultSortOrder: "ascend",
+        render: (val, record) => (
+          <ClassCodeTag code={val} muted={record.status !== "open"} />
         ),
       },
       {
-        title: 'Khung giờ',
-        dataIndex: 'timeSlot',
-        key: 'timeSlot',
-        width: 170,
+        title: "Khung giờ",
+        dataIndex: "timeSlot",
+        key: "timeSlot",
+        width: 155,
         render: (val) => (
-          <Tag color="blue" style={{ fontWeight: 600, fontSize: 12 }}>
-            {val}
-          </Tag>
-        ),
-      },
-      {
-        title: 'Ngày học',
-        key: 'studyDates',
-        width: 220,
-        render: (_, record) => (
-          <Tooltip
-            title={record.studyDates
-              ?.map((d) => dayjs(d).format('DD/MM/YYYY'))
-              .join(' · ')}
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 13.5,
+              color: T.black,
+              letterSpacing: -0.2,
+            }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-              {record.studyDates?.map((date, index) => (
-                <Tag
-                  key={index}
-                  color="blue"
-                  style={{ fontWeight: 600, fontSize: 12, margin: 0 }}
-                >
-                  {dayjs(date).format('DD/MM')}
-                </Tag>
-              ))}
-            </div>
-          </Tooltip>
+            {val}
+          </span>
         ),
       },
       {
-        title: 'Sĩ số',
-        key: 'capacity',
-        width: 90,
-        align: 'center',
-        render: (_, record) => (
-          <Text>
-            <Text
-              strong
-              style={{
-                color:
-                  record.currentBooked >= record.maxCapacity ? '#cf1322' : '#389e0d',
-              }}
+        title: "Lịch ngày học",
+        key: "studyDates",
+        width: 240,
+        render: (_, record) => {
+          const sortedDates = [...(record.studyDates ?? [])].sort(
+            (a, b) => new Date(a) - new Date(b),
+          );
+          if (sortedDates.length === 0) return <Text type="secondary">—</Text>;
+
+          return (
+            <Tooltip
+              title={sortedDates
+                .map((d) => dayjs(d).format("DD/MM/YYYY"))
+                .join(" · ")}
             >
-              {record.currentBooked}
-            </Text>
-            <Text type="secondary"> / {record.maxCapacity}</Text>
-          </Text>
-        ),
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                <span style={{ color: T.black, fontWeight: 600 }}>
+                  {sortedDates.map((date, index) => (
+                    <span key={index} style={{ whiteSpace: "nowrap" }}>
+                      {dayjs(date).format("DD/MM")}
+                      {index < sortedDates.length - 1 && (
+                        <span
+                          style={{
+                            color: "#C7C7CC",
+                            fontWeight: 400,
+                            margin: "0 5px",
+                          }}
+                        >
+                          ·
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </span>
+                <span style={{ color: "#8E8E93", fontSize: 12, marginLeft: 6 }}>
+                  ({sortedDates.length} buổi)
+                </span>
+              </div>
+            </Tooltip>
+          );
+        },
       },
       {
-        title: 'Trạng thái',
-        dataIndex: 'status',
-        key: 'status',
-        width: 95,
-        align: 'center',
+        title: "Sĩ số",
+        key: "capacity",
+        width: 100,
+        align: "center",
+        render: (_, record) => {
+          const isReached = record.currentBooked >= record.maxCapacity;
+          return (
+            <span style={{ fontSize: 13 }}>
+              <strong
+                style={{
+                  color: isReached ? "#B91C1C" : T.black,
+                  fontWeight: 700,
+                }}
+              >
+                {record.currentBooked}
+              </strong>
+              <span style={{ color: "#8E8E93" }}> / {record.maxCapacity}</span>
+            </span>
+          );
+        },
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "status",
+        key: "status",
+        width: 110,
+        align: "center",
         render: (val) => <SessionStatusTag status={val} />,
       },
       {
-        title: 'Hiển thị',
-        dataIndex: 'isHidden',
-        key: 'isHidden',
+        title: "Hiển thị",
+        dataIndex: "isHidden",
+        key: "isHidden",
         width: 105,
-        align: 'center',
+        align: "center",
         render: (_, record) => (
           <Tooltip
             title={
               !record.isHidden
-                ? 'Đang hiển thị trên lịch học Public (Click để ẩn)'
-                : 'Đang ẩn khỏi lịch học Public (Click để hiện)'
+                ? "Đang hiển thị trên lịch học Public (Click để ẩn)"
+                : "Đang ẩn khỏi lịch học Public (Click để hiện)"
             }
           >
             <Switch
@@ -414,25 +464,26 @@ export default function SessionPage() {
               checkedChildren="Hiện"
               unCheckedChildren="Ẩn"
               style={{
-                backgroundColor: !record.isHidden ? '#34C759' : undefined,
+                backgroundColor: !record.isHidden ? "#34C759" : undefined,
               }}
             />
           </Tooltip>
         ),
       },
       {
-        title: 'Thao tác',
-        key: 'actions',
-        width: 120,
-        align: 'center',
-        fixed: 'right',
+        title: "Thao tác",
+        key: "actions",
+        width: 115,
+        align: "center",
+        fixed: "right",
         render: (_, record) => (
-          <Space size={4}>
+          <Space size={2}>
             <Tooltip title="Chi tiết học viên">
               <Button
                 type="text"
+                size="small"
                 icon={<EyeOutlined />}
-                style={{ color: '#1677ff' }}
+                style={{ color: "#1E4DB7" }}
                 onClick={() => openDetail(record)}
                 id={`btn-detail-${record._id}`}
               />
@@ -440,6 +491,7 @@ export default function SessionPage() {
             <Tooltip title="Chỉnh sửa">
               <Button
                 type="text"
+                size="small"
                 icon={<EditOutlined />}
                 onClick={() => openEdit(record)}
                 id={`btn-edit-${record._id}`}
@@ -457,6 +509,7 @@ export default function SessionPage() {
               <Tooltip title="Xóa">
                 <Button
                   type="text"
+                  size="small"
                   danger
                   icon={<DeleteOutlined />}
                   id={`btn-delete-${record._id}`}
@@ -467,19 +520,29 @@ export default function SessionPage() {
         ),
       },
     ],
-    [togglingId, handleToggleHidden, openDetail, openEdit, handleDelete]
+    [togglingId, handleToggleHidden, openDetail, openEdit, handleDelete],
   );
 
   const hasActiveFilter = Boolean(searchCode.trim() || filterStatus);
   const resetFilters = useCallback(() => {
-    setSearchCode('');
+    setSearchCode("");
     setFilterStatus(null);
   }, []);
+
+  const openSessionCount = useMemo(
+    () => sessions.filter((s) => s.status === "open").length,
+    [sessions],
+  );
 
   return (
     <>
       <PageHeader
         title="Quản lý Lớp học"
+        badgeText={
+          sessions.length > 0
+            ? `${sessions.length} lớp · ${openSessionCount} đang mở`
+            : null
+        }
         loading={loading}
         onReload={handleReload}
         isFilterOpen={isFilterOpen}
@@ -496,7 +559,11 @@ export default function SessionPage() {
         hasActiveFilter={hasActiveFilter}
         summaryText={
           <>
-            Đang lọc — <Text strong>{filteredSessions.length}</Text> lớp
+            Đang lọc —{" "}
+            <strong style={{ color: T.black }}>
+              {filteredSessions.length}
+            </strong>{" "}
+            lớp
           </>
         }
         onReset={resetFilters}
@@ -507,7 +574,7 @@ export default function SessionPage() {
             allowClear
             value={searchCode}
             onChange={(e) => setSearchCode(e.target.value)}
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             id="search-session-code"
           />
         </Col>
@@ -518,7 +585,7 @@ export default function SessionPage() {
             allowClear
             value={filterStatus}
             onChange={(val) => setFilterStatus(val ?? null)}
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             id="filter-session-status"
             options={SESSION_STATUS_OPTIONS}
           />
@@ -537,34 +604,28 @@ export default function SessionPage() {
 
       {loading ? (
         !screens.md ? (
-          <Card loading style={{ borderRadius: 8, marginTop: 4 }} />
+          <Card loading style={{ borderRadius: 12, marginTop: 4 }} />
         ) : (
-          <Table
-            loading={loading}
-            dataSource={[]}
-            columns={sessionColumns}
-            scroll={{ x: 800 }}
-          />
+          <div className="admin-saas-card">
+            <Table
+              loading={loading}
+              dataSource={[]}
+              columns={sessionColumns}
+              scroll={{ x: 800 }}
+            />
+          </div>
         )
       ) : !activeCampaignId || sortedMonthKeys.length === 0 ? (
         <Empty
           description={
             hasActiveFilter
-              ? 'Không tìm thấy lớp học nào phù hợp với bộ lọc.'
-              : 'Khóa học này chưa có lớp học nào. Hãy thêm mới!'
+              ? "Không tìm thấy lớp học nào phù hợp với bộ lọc."
+              : "Khóa học này chưa có lớp học nào. Hãy thêm mới!"
           }
-          style={{ padding: '48px 0' }}
+          style={{ padding: "48px 0" }}
         />
       ) : screens.md ? (
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 10,
-            border: '1px solid #f0f0f0',
-            overflow: 'hidden',
-            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.03)',
-          }}
-        >
+        <div className="admin-saas-card">
           {/* Thanh chọn Tháng khoa học kèm thống kê nhanh */}
           <SessionMonthBar
             sortedMonthKeys={sortedMonthKeys}
@@ -574,23 +635,26 @@ export default function SessionPage() {
             isMobile={false}
           />
 
-          <div style={{ padding: '12px 16px 16px' }}>
-            <Table
-              rowKey="_id"
-              dataSource={activeMonthSessions}
-              columns={sessionColumns}
-              size="small"
-              scroll={{ x: 800 }}
-              pagination={
-                activeMonthSessions.length > 8
-                  ? { pageSize: 8, showTotal: (t) => `${t} lớp`, showSizeChanger: false }
-                  : false
-              }
-              locale={{
-                emptyText: `Tháng ${selectedMonthKey} chưa có lớp học nào.`,
-              }}
-            />
-          </div>
+          <Table
+            rowKey="_id"
+            dataSource={activeMonthSessions}
+            columns={sessionColumns}
+            size="middle"
+            scroll={{ x: 800 }}
+            pagination={
+              activeMonthSessions.length > 8
+                ? {
+                    pageSize: 8,
+                    showTotal: (t) => `${t} lớp`,
+                    showSizeChanger: false,
+                    style: { padding: "0 16px", margin: "12px 0" },
+                  }
+                : false
+            }
+            locale={{
+              emptyText: `Tháng ${selectedMonthKey} chưa có lớp học nào.`,
+            }}
+          />
         </div>
       ) : (
         <SessionMobileView
@@ -599,8 +663,6 @@ export default function SessionPage() {
           selectedMonthKey={selectedMonthKey}
           onSelectMonth={setChosenMonthKey}
           sessions={activeMonthSessions}
-          togglingId={togglingId}
-          onToggleHidden={handleToggleHidden}
           onDetail={openDetail}
           onEdit={openEdit}
           onDelete={handleDelete}
