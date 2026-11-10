@@ -9,6 +9,7 @@ import ScheduleFilterBar from "../components/schedule/ScheduleFilterBar";
 import CourseSelectModal from "../components/schedule/CourseSelectModal";
 import CustomerSessionCard from "../components/schedule/CustomerSessionCard";
 import ContactModal from "../components/schedule/ContactModal";
+import FloatingContactWidget from "../components/schedule/FloatingContactWidget";
 
 const { Title, Text } = Typography;
 
@@ -309,6 +310,9 @@ export default function CustomerSchedulePage() {
         contactLinks={contactLinks}
         onClose={() => setRegisterSession(null)}
       />
+
+      {/* Nút tròn nổi Thông tin liên hệ & Địa chỉ Studio */}
+      <FloatingContactWidget contactLinks={contactLinks} />
     </div>
   );
 }

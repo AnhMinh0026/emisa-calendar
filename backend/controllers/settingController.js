@@ -4,7 +4,7 @@ const SystemSetting = require('../models/SystemSetting');
 
 // Default value khi key chưa tồn tại
 const DEFAULTS = {
-  contact_links: { facebook: '', zalo: '' },
+  contact_links: { facebook: '', zalo: '', address: '', mapUrl: '', mapEmbed: '' },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
